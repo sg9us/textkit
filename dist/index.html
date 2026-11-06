@@ -103,11 +103,13 @@
             <label class="field"><span class="field-label">배경</span><select id="backgroundMode"><option value="transparent">투명</option><option value="white">흰색</option><option value="black">검은색</option><option value="custom">사용자 지정</option></select></label>
             <label class="field"><span class="field-label">사용자 지정 색상</span><input class="custom-color" id="customColor" type="color" value="#ffffff" hidden></label>
             <label class="field setting-span-2"><span class="field-label">품질</span><span class="range-row"><input id="quality" type="range" min="1" max="100" value="85"><output class="range-value" id="qualityValue">85</output></span></label>
-            <div class="field setting-span-2"><span class="field-label">반복</span><label class="preview-loop" style="margin-top:0"><input id="loopInfinite" type="checkbox" checked> 무한 반복</label></div>
-            <label class="field"><span class="field-label">반복 횟수</span><input id="loopCount" type="number" min="1" max="65535" value="1" disabled></label>
-            <label class="field"><span class="field-label">파일명</span><input id="webpFileName" value="animation.webp"></label>
           </div>
-          <div class="generate-row"><button class="generate-btn" id="generateWebp" type="button">WebP 생성 및 저장</button><div class="generate-meta">브라우저에서만 처리 · 서버 전송 없음</div></div>
+          <div class="webp-meta-settings">
+            <div class="field loop-setting"><span class="field-label">반복</span><label class="loop-check"><input id="loopInfinite" type="checkbox" checked><span>무한 반복</span></label></div>
+            <label class="field loop-count-setting"><span class="field-label">반복 횟수</span><input id="loopCount" type="number" min="1" max="65535" value="1" disabled></label>
+            <label class="field filename-setting"><span class="field-label">파일명</span><input id="webpFileName" value="animation.webp"></label>
+          </div>
+          <div class="generate-row"><button class="generate-btn" id="generateWebp" type="button">WebP 저장</button><div class="generate-meta">브라우저에서만 처리 · 서버 전송 없음</div></div>
           <div class="encode-progress"><div class="encode-progress-bar" id="encodeProgressBar"></div></div><div class="encode-status" id="encodeStatus" role="status"></div>
           <div class="webp-result" id="webpResult" hidden><img id="webpResultImage" alt="생성된 Animated WebP 미리보기"><div class="webp-result-info"><div class="webp-result-title">Animated WebP 생성 완료</div><div class="webp-result-meta" id="webpResultMeta"></div></div><a class="download-result" id="webpResultDownload">다시 다운로드</a></div>
           <p class="webp-memory-note">업로드 이미지는 브라우저 메모리에만 보관되며 새로고침하면 사라질 수 있습니다.</p>

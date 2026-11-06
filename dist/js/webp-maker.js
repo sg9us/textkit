@@ -138,7 +138,7 @@ export function initWebPMaker({ notify = () => {} } = {}) {
     els.workspace.hidden = !hasFrames;
     els.dropZone.classList.toggle('compact', hasFrames);
     els.uploadCopy.innerHTML = hasFrames
-      ? `<div><div class="upload-title">이미지 추가</div><div class="upload-note">PNG, JPG, 정적 WebP · 현재 ${state.frames.length}개</div></div>`
+      ? `<div class="upload-compact-copy"><div class="upload-icon compact-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="m6.5 16 4-4 3 3 2-2 2.5 3"/><path d="M16.5 7.5v5m-2.5-2.5h5"/></svg></div><div><div class="upload-title">이미지 추가</div><div class="upload-note">PNG, JPG, 정적 WebP · 현재 ${state.frames.length}개</div></div></div>`
       : `<div><div class="upload-icon" aria-hidden="true">＋</div><div class="upload-title">이미지를 놓거나 선택해 주세요</div><div class="upload-note">PNG, JPG/JPEG, 정적 WebP · 여러 파일 선택 가능</div></div>`;
     els.pickButton.textContent = hasFrames ? '이미지 추가' : '파일 선택';
     if (!hasFrames) return;
@@ -160,14 +160,14 @@ export function initWebPMaker({ notify = () => {} } = {}) {
           <div class="move-actions"><button type="button" data-move="up" aria-label="${index + 1}번 프레임 위로 이동" ${index === 0 ? 'disabled' : ''}>↑ 위로</button><button type="button" data-move="down" aria-label="${index + 1}번 프레임 아래로 이동" ${index === state.frames.length - 1 ? 'disabled' : ''}>↓ 아래로</button></div>
         </div>
         <label class="delay-field"><span class="sr-only">${index + 1}번 프레임 DELAY</span><input inputmode="numeric" value="${frame.draftDelay}" data-delay aria-label="${index + 1}번 프레임 DELAY (ms)" class="${frame.error ? 'invalid' : ''}"><small>${escapeHTML(frame.error)}</small></label>
-        <div class="frame-actions"><button class="frame-icon-btn" type="button" data-duplicate aria-label="${index + 1}번 프레임 복제" title="복제">⧉</button><button class="frame-icon-btn danger" type="button" data-delete aria-label="${index + 1}번 프레임 삭제" title="삭제">×</button></div>
+        <div class="frame-actions"><button class="frame-icon-btn" type="button" data-duplicate aria-label="${index + 1}번 프레임 복제" title="복제"><svg class="frame-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="10" height="10" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></button><button class="frame-icon-btn danger" type="button" data-delete aria-label="${index + 1}번 프레임 삭제" title="삭제">×</button></div>
       </article>`).join('');
 
     els.frameList.querySelectorAll('.frame-card').forEach((card) => {
       const frame = state.frames.find((item) => item.id === card.dataset.id);
       card.addEventListener('dragstart', () => { state.draggingId = frame.id; card.classList.add('dragging'); });
-      card.addEventListener('dragend', () => { state.draggingId = null; card.classList.remove('dragging'); clearDropStyles(); });
-      card.addEventListener('dragover', (event) => { event.preventDefault(); clearDropStyles(); if (state.draggingId !== frame.id) card.classList.add('drop-before'); });
+      card.addEventListener('dragend', () => { state.draggingId = null; card.classList.remove('dragging'); });
+      card.addEventListener('dragover', (event) => { event.preventDefault(); });
       card.addEventListener('drop', (event) => { event.preventDefault(); reorderById(state.draggingId, frame.id); });
       const delayInput = card.querySelector('[data-delay]');
       delayInput.addEventListener('input', (event) => { frame.draftDelay = event.target.value; frame.error = ''; event.target.classList.remove('invalid'); card.querySelector('small').textContent = ''; });
@@ -178,8 +178,6 @@ export function initWebPMaker({ notify = () => {} } = {}) {
       card.querySelectorAll('[data-move]').forEach((button) => button.addEventListener('click', () => moveFrame(frame.id, button.dataset.move === 'up' ? -1 : 1)));
     });
   }
-
-  function clearDropStyles() { els.frameList.querySelectorAll('.drop-before').forEach((item) => item.classList.remove('drop-before')); }
 
   function commitFrameDelay(frame, input) {
     const result = validateDelay(frame.draftDelay);
@@ -454,7 +452,7 @@ export function initWebPMaker({ notify = () => {} } = {}) {
     } finally {
       state.encoding = false;
       els.generateButton.disabled = false;
-      els.generateButton.textContent = 'WebP 생성 및 저장';
+      els.generateButton.textContent = 'WebP 저장';
     }
   }
 
