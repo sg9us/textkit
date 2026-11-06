@@ -1,0 +1,169 @@
+# Textkit
+
+글자수 확인과 텍스트 정리, Animated WebP 제작, 서식 문서의 Markdown 변환을 제공하는 개인용 브라우저 업무 도구입니다. 텍스트와 이미지는 외부 서버로 전송하지 않고 브라우저 안에서 처리합니다.
+
+## 실행
+
+`dist/index.html`을 더블 클릭하면 텍스트 도구의 기본 기능을 사용할 수 있습니다.
+
+로컬 서버로 실행하려면 프로젝트 폴더에서 다음 명령을 실행하고 `http://localhost:8080`을 여세요.
+
+```bash
+python3 -m http.server 8080 --directory dist
+```
+
+Animated WebP와 문서 → MD 모듈의 동적 로딩, Document PiP와 시스템 파일 저장 기능을 안정적으로 사용하려면 localhost 실행을 권장합니다.
+
+### macOS에서 가장 쉽게 localhost로 열기
+
+1. 이미 서버가 실행 중이면 터미널에서 `Control + C`를 눌러 종료합니다.
+2. 터미널에 아래 명령을 입력하고, 마지막에 공백을 하나 둔 상태로 아직 Enter는 누르지 않습니다.
+
+```bash
+python3 -m http.server 8080 --directory 
+```
+
+3. Finder에서 압축을 푼 Textkit 폴더 안의 `dist` 폴더를 터미널 창으로 드래그합니다. 한글·공백·대괄호·이모지가 포함된 경로도 터미널이 자동으로 처리합니다.
+4. Enter를 누르고, 터미널에 `Serving HTTP on ... port 8080`이 표시되면 서버를 켜둔 채 브라우저 주소창에서 [http://localhost:8080](http://localhost:8080)을 엽니다.
+
+`404 File not found`가 표시되면 대부분 다른 위치의 `dist`를 지정한 경우입니다. 폴더 경로만 단독으로 실행하면 `permission denied`가 발생하며, `cd`를 사용할 때는 명령과 경로 사이에 공백이 필요합니다.
+
+## Mac에 웹앱으로 설치
+
+PWA 설치와 오프라인 사용은 배포된 HTTPS 주소 또는 `localhost`에서 사용할 수 있습니다. `index.html`을 더블 클릭한 `file://` 환경에서는 Service Worker가 등록되지 않습니다.
+
+### Safari
+
+1. Safari에서 배포된 Textkit 주소를 엽니다.
+2. 메뉴 막대의 `파일 → Dock에 추가` 또는 공유 버튼의 `Dock에 추가`를 선택합니다.
+3. 이름을 확인하고 `추가`를 누르면 Dock과 응용 프로그램에서 독립 웹앱처럼 열 수 있습니다.
+
+### Chrome 계열 브라우저
+
+배포된 Textkit 주소를 연 뒤 주소창의 설치 아이콘 또는 브라우저 메뉴의 앱 설치 항목을 선택합니다. 설치 후에는 `standalone` 모드로 실행됩니다.
+
+### 오프라인과 업데이트
+
+- 최초 온라인 접속 시 세 탭의 HTML·CSS·JavaScript, WebP 인코더, 문서 변환기, manifest와 아이콘을 캐시합니다.
+- WebP 생성에는 외부 CDN 라이브러리를 사용하지 않으며 필수 인코딩 코드가 `dist/js/webp-maker.js`에 포함되어 있어 오프라인 캐시가 가능합니다.
+- 온라인에서는 네트워크 응답을 우선 사용하고, 연결이 끊겼을 때 캐시를 사용합니다.
+- 새 버전의 Service Worker가 설치되면 이전 `textkit-shell-*` 캐시를 삭제합니다. 페이지를 다시 열거나 새로고침하면 새 버전이 적용됩니다.
+- 입력 중인 내용을 잃지 않도록 앱이 강제로 새로고침하지 않고 업데이트 준비 알림만 표시합니다.
+
+릴리즈할 때는 `dist/js/config.js`의 앱 버전과 `dist/sw.js`의 `CACHE_NAME` 버전을 함께 올려야 새 캐시가 분리됩니다.
+
+## 주요 기능
+
+- 공백 포함·제외 실시간 글자수와 작업 유형별 제한 표시
+- 프롬프트 정리, 띄어쓰기/빈 줄/줄바꿈/전체 공백 제거, 공백 정돈, 일괄 치환
+- 원문을 보존하는 조건부 결과 영역과 원문 적용
+- 현재 원문 또는 정리 결과 복사 및 UTF-8 `.md` 저장
+- 지원 브라우저에서는 File System Access API로 저장 위치와 파일명을 직접 선택
+- 미지원 브라우저에서는 파일명 확인 후 일반 다운로드 방식으로 저장
+- 기본 OFF인 선택형 브라우저 임시 저장
+- Toss Design System의 중립색 계층을 참고한 라이트·다크 모드와 브라우저별 테마 설정 저장
+- 지원 브라우저에서 메인 화면과 동기화되는 Document Picture-in-Picture 미니창
+- 미니창에서 프롬프트 정리 선택, 현재 원문/정리 결과 복사, Markdown 바로 저장 및 메인 화면 테마 동기화
+
+### Animated WebP
+
+- PNG, JPG/JPEG, 정적 WebP 다중 업로드와 드래그 앤 드롭
+- 드래그, 위로/아래로 버튼, 파일명순 정렬을 통한 프레임 순서 변경
+- 프레임 복제·삭제와 프레임별 DELAY 보존
+- 입력 중 강제 보정 없는 개별 DELAY와 전체/마지막 프레임 일괄 적용
+- 첫 프레임 기준 또는 사용자 지정 출력 크기
+- Fit/Fill, 투명·흰색·검은색·사용자 지정 배경
+- 인코딩 전 실시간 애니메이션 미리보기
+- 품질, 무한/지정 횟수 반복, 파일명 설정
+- 실제 `VP8X + ANIM + ANMF` 구조의 Animated WebP 생성 및 자체 구조 검증
+- Animated WebP 입력은 조용히 첫 프레임만 쓰지 않고 명확히 거부
+
+WebP 컨테이너 구성은 [Google WebP Container Specification](https://developers.google.com/speed/webp/docs/riff_container)을 따릅니다.
+
+### 문서 → MD
+
+- Google Docs의 `text/html` 클립보드를 우선 사용하는 서식 붙여넣기
+- 제목 H1~H6, 굵게, 기울임, 취소선, 목록, 인용문, 구분선, 링크, 표, 코드 보존
+- 스크립트·위험 요소와 `javascript:` URL을 제거한 뒤 편집기에 삽입
+- Google Docs의 인라인 글자 크기와 굵기를 제목·강조 구조로 정리
+- 문서 전체에 적용된 Google Docs 기본 굵기를 본문 스타일로 판별해 전체가 볼드로 변환되는 현상 방지
+- 편집기 툴바의 들여쓰기·내어쓰기와 Markdown 인용 구조 변환
+- 종이 페이지형 여백 없이 편집 영역 전체를 사용하는 일반 텍스트 박스 레이아웃
+- 작품 이름과 문서 종류를 조합한 파일명 자동 생성
+- 직접 수정한 파일명을 자동 생성 값으로 덮어쓰지 않는 보호 동작
+- GFM 표를 포함한 Markdown 원문 실시간 확인과 전체 복사
+- File System Access API를 통한 파일명·저장 위치 선택 및 UTF-8 `.md` 저장
+- 미지원 브라우저에서는 파일명 다이얼로그와 일반 다운로드 사용
+
+병합 셀, 사용자 지정 글자색, 정렬처럼 표준 Markdown으로 표현하기 어려운 서식은 안내 메시지를 표시합니다.
+
+## PiP 브라우저 제약
+
+Document Picture-in-Picture는 지원하는 Chromium 계열 데스크톱 브라우저와 보안 컨텍스트에서만 작동합니다. 지원되지 않는 환경에서는 미니창 버튼이 비활성화되며 나머지 기능은 그대로 사용할 수 있습니다. PiP 검수 시 위의 로컬 서버 방식으로 실행하는 것을 권장합니다.
+
+## 데이터 처리
+
+입력 텍스트와 문서 본문은 외부 서버로 전송되지 않습니다. 텍스트 도구의 자동 임시 저장은 기본적으로 꺼져 있으며, 사용자가 켠 경우에만 현재 브라우저의 `localStorage`에 저장됩니다. 선택한 라이트·다크 테마도 같은 브라우저에 저장됩니다. 문서 → MD 본문은 자동 저장하지 않고 작품명과 문서 종류만 최근 설정으로 보존합니다.
+
+업로드 이미지는 브라우저 메모리에만 유지되며 새로고침하면 사라질 수 있습니다. 탭 전환만으로는 텍스트와 프레임 상태가 사라지지 않습니다.
+
+## 브라우저 제약
+
+- Animated WebP 생성에는 Canvas WebP 인코딩과 ES 모듈을 지원하는 최신 브라우저가 필요합니다.
+- 큰 이미지나 많은 프레임은 메모리 사용량과 인코딩 시간이 증가합니다. 출력은 한 변 최대 4,096px, 총 16,777,216픽셀로 제한합니다.
+- 시스템 저장 창은 File System Access API 지원 브라우저에서 사용합니다. 미지원 환경에서는 일반 다운로드가 실행됩니다.
+
+## GitHub Pages 배포
+
+프로젝트에는 `dist`를 그대로 배포하는 `.github/workflows/deploy-pages.yml`이 포함되어 있습니다.
+
+```bash
+gh auth login -h github.com -p https -w
+git add .
+git commit -m "feat: add Textkit PWA v1.4.0"
+gh repo create textkit --public --source=. --remote=origin --push
+```
+
+저장소 생성 후 GitHub의 `Settings → Pages → Build and deployment → Source`에서 `GitHub Actions`를 선택합니다. 이후 `main` 브랜치에 push하면 워크플로가 `dist`를 배포합니다. 저장소 공개 범위는 필요에 따라 `--public` 대신 `--private`으로 바꿀 수 있으며, 비공개 저장소의 Pages 지원 여부는 GitHub 요금제를 확인하세요.
+
+## Cloudflare Pages 배포
+
+GitHub 저장소를 Cloudflare Pages에 연결할 때 다음 값을 사용합니다.
+
+- Production branch: `main`
+- Framework preset: 없음
+- Build command: `exit 0`
+- Build output directory: `dist`
+
+`dist/_headers`는 Service Worker, manifest와 버전이 바뀌는 앱 파일을 재검증하도록 설정합니다. Git 연동 대신 직접 업로드할 경우 Cloudflare Pages의 Direct Upload에서 `dist` 폴더를 선택할 수 있습니다.
+
+## 검수 결과
+
+- 크기가 서로 다른 PNG 3장 업로드 및 프레임 상태 유지
+- DELAY 입력 중 빈 값과 `1200` 타이핑 방해 없음
+- 일괄 DELAY `1200/1200/1200`, 마지막 DELAY `900` 적용
+- 복제·삭제·순서 변경 후 DELAY 데이터와 총 재생시간 유지
+- 사용자 지정 `240×180`, Fill, 투명 배경으로 생성
+- 생성 파일에서 `RIFF/WEBP`, `VP8X`, `ANIM`, `ANMF × 3` 확인
+- 생성 파일의 DELAY `1200/900/1200ms`, 출력 크기 `240×180` 확인
+- 텍스트와 프레임의 탭 전환 상태 유지 및 작은 화면 가로 스크롤 미발생 확인
+- Google Docs 형태의 인라인 스타일 HTML에서 H1/H2와 굵은 글씨 복원
+- 중첩 목록, 번호 목록, 인용문과 3열 표의 Markdown 변환 확인
+- 스크립트와 `javascript:` 링크 제거, 안전한 HTTPS 링크 보존 확인
+- 자동 파일명 `D9_하녀의 성찬_방향성_줄거리.md` 생성 확인
+- 수동 파일명 보호, 기타 문서 종류, `.md` 중복 방지 확인
+- 문서 탭 전환 후 편집 상태 유지와 좁은 화면 반응형 확인
+- 라이트·다크 모드 전환, 세 도구 화면의 배경·텍스트 대비와 새 창에서의 설정 유지 확인
+- 문서 전체 기본 굵기와 실제 부분 강조 구분, 들여쓰기·내어쓰기의 Markdown 변환 확인
+- PWA manifest, 192×192·512×512 PNG 아이콘과 `standalone` 실행 설정 확인
+- Service Worker 설치 후 로컬 서버를 종료한 상태에서 새 창으로 앱 셸과 세 탭의 동적 모듈 로딩 확인
+- 버전별 캐시 이름과 활성화 단계의 이전 `textkit-shell-*` 캐시 삭제 로직 확인
+
+## 버전
+
+- `v1.4.0` — Mac 설치형 PWA manifest·아이콘·Service Worker 오프라인 캐시, 업데이트 무효화와 GitHub/Cloudflare Pages 배포 설정 추가
+- `v1.3.1` — Google Docs 붙여넣기 전체 볼드 오류 수정, 들여쓰기·내어쓰기 추가 및 문서 편집기를 일반 텍스트 박스로 변경
+- `v1.3.0` — Toss Design System 계열의 중립색 기반 다크 모드, 브라우저 설정 저장 및 미니창 테마 동기화 추가
+- `v1.2.0` — Google Docs 서식 붙여넣기, Markdown 변환과 원하는 이름·위치 저장을 제공하는 문서 → MD 탭 추가
+- `v1.1.0` — Animated WebP 탭, 프레임 편집, DELAY UX, 미리보기 및 실제 애니메이션 인코딩 추가
+- `v1.0.1` — `.MD 저장` 시스템 파일 선택 UX 및 `sg9us` 저작권 표시 추가

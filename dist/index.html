@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="글자수 확인, 텍스트 정리와 Animated WebP 제작을 한 화면에서 처리하는 업무용 도구">
+  <meta name="application-version" content="">
+  <meta name="theme-color" content="#191f28">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Textkit">
+  <script>try{document.documentElement.dataset.theme=localStorage.getItem('textkit.theme')==='dark'?'dark':'light'}catch{document.documentElement.dataset.theme='light'}</script>
+  <title>Textkit — 업무용 텍스트 유틸리티</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <link rel="stylesheet" href="./webp.css">
+  <link rel="stylesheet" href="./doc-md.css">
+  <style>
+    :root{--black:#191f28;--white:#fff;--g50:#f9fafb;--g100:#f2f4f6;--g200:#e5e8eb;--g400:#8b95a1;--g600:#6b7684;--g700:#4e5968;--green:#03b26c;--red:#f04452;--radius:12px;--ease:180ms ease;color-scheme:light}
+    :root[data-theme="dark"]{--black:#f2f4f6;--white:#17171c;--g50:#202027;--g100:#2c2c35;--g200:#3d414b;--g400:#8b95a1;--g600:#b0b8c1;--g700:#d1d6db;color-scheme:dark}
+    *{box-sizing:border-box}html{background:var(--white);color:var(--black);font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",sans-serif;transition:background var(--ease),color var(--ease)}body{margin:0;min-width:320px;background:var(--white);transition:background var(--ease)}button,input,select,textarea{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid color-mix(in srgb,var(--black) 18%,transparent);outline-offset:2px}
+    .shell{width:min(1120px,calc(100% - 40px));margin:0 auto;padding:0 0 56px}.header{height:76px;display:flex;align-items:center;justify-content:space-between}.brand{font-size:22px;font-weight:800;letter-spacing:-.7px}.header-actions{display:flex;gap:8px}.icon-btn{width:40px;height:40px;border:0;border-radius:10px;background:transparent;color:var(--g700);display:grid;place-items:center;transition:background var(--ease),color var(--ease)}.icon-btn:hover{background:var(--g100);color:var(--black)}.icon-btn:disabled{cursor:not-allowed;opacity:.35}.icon{width:20px;height:20px;display:block}#textPanel{max-width:860px;margin:0 auto}
+    .toolbar{display:flex;justify-content:space-between;align-items:end;margin:12px 0 10px}.type-wrap{display:grid;gap:6px}.eyebrow{font-size:12px;font-weight:600;color:var(--g600)}select{height:38px;padding:0 34px 0 12px;border:1px solid var(--g200);border-radius:9px;background:var(--white);color:var(--black);font-size:14px;font-weight:600}
+    .editor{width:100%;height:360px;resize:vertical;display:block;border:1px solid var(--g200);border-radius:var(--radius);padding:22px;background:var(--white);color:var(--black);font-size:16px;line-height:1.72;transition:border var(--ease),box-shadow var(--ease)}.editor::placeholder{color:var(--g400)}.editor:focus{border-color:var(--black);box-shadow:0 0 0 3px rgba(25,31,40,.07);outline:0}
+    .stats{min-height:82px;display:flex;gap:28px;align-items:center;justify-content:space-between;padding:16px 4px 14px;border-bottom:1px solid var(--g200)}.counts{display:flex;gap:28px;flex:none}.count{display:grid;gap:2px}.count-label{font-size:12px;color:var(--g600)}.count-value{font-size:20px;line-height:1.25;font-weight:700;font-variant-numeric:tabular-nums}.limit{width:min(320px,45%);display:grid;gap:8px}.limit-label{text-align:right;color:var(--g600);font-size:13px;font-variant-numeric:tabular-nums}.limit-label.over{color:var(--red);font-weight:700}.track{height:5px;background:var(--g100);border-radius:99px;overflow:hidden}.bar{height:100%;width:0;background:var(--black);border-radius:inherit;transition:width var(--ease),background var(--ease)}.bar.over{background:var(--red)}
+    .tools{padding:24px 0 22px}.section-row{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px}.section-title{margin:0;font-size:15px}.tool-grid{display:flex;flex-wrap:wrap;gap:8px}.chip{min-height:40px;border:1px solid var(--g200);border-radius:10px;padding:0 14px;background:var(--white);color:var(--g700);font-size:14px;font-weight:600;transition:all var(--ease)}.chip:hover{background:var(--g50);border-color:#c8cdd2}.chip.active{background:var(--black);border-color:var(--black);color:var(--white)}.more-btn{border:0;background:transparent;color:var(--g600);font-size:13px;font-weight:600;padding:6px}.extra-tools[hidden],.replace-box[hidden],.result[hidden]{display:none}.extra-tools{margin-top:8px}.replace-box{margin-top:12px;padding:14px;background:var(--g50);border-radius:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px}.replace-box label{display:grid;gap:6px;font-size:12px;color:var(--g600)}.text-input{height:42px;border:1px solid var(--g200);border-radius:9px;padding:0 12px;color:var(--black);background:var(--white)}
+    .result{margin-bottom:22px;border:1px solid var(--g200);border-radius:var(--radius);background:var(--g50);overflow:hidden}.result-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 0}.result-title-wrap{display:flex;align-items:center;gap:7px}.success-dot{width:18px;height:18px;border-radius:50%;background:var(--green);color:white;display:grid;place-items:center}.result h2{font-size:15px;margin:0}.result-meta{font-size:12px;color:var(--g600);font-variant-numeric:tabular-nums}.result-text{margin:14px 18px;min-height:112px;max-height:280px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;padding:16px;border:1px solid var(--g200);border-radius:9px;background:var(--white);font-size:14px;line-height:1.65;user-select:text}.result-actions{display:flex;justify-content:flex-end;padding:0 18px 16px}.apply-btn{height:38px;border:1px solid var(--g200);border-radius:9px;background:var(--white);padding:0 14px;font-weight:600;font-size:13px;color:var(--black)}
+    .primary-actions{display:grid;grid-template-columns:minmax(0,2.4fr) minmax(150px,1fr);gap:10px}.action{height:54px;border-radius:11px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;transition:transform var(--ease),background var(--ease),border var(--ease)}.action:active{transform:scale(.99)}.copy-btn{border:1px solid var(--black);background:var(--black);color:var(--white)}.copy-btn.success{border-color:var(--green);background:var(--green)}.save-btn{border:1px solid var(--g200);background:var(--white);color:var(--black)}.save-btn:hover,.apply-btn:hover{background:var(--g50)}.footer{display:flex;align-items:center;justify-content:center;gap:8px;padding:28px 0 0;color:var(--g400);font-size:12px}.footer-dot{width:2px;height:2px;border-radius:50%;background:var(--g400)}
+    dialog{width:min(480px,calc(100% - 32px));border:1px solid var(--g200);border-radius:16px;padding:0;box-shadow:0 18px 60px rgba(0,0,0,.28);color:var(--black);background:var(--white)}dialog::backdrop{background:rgba(0,0,0,.55)}.modal{padding:24px}.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}.modal h2{margin:0;font-size:19px}.close{border:0;background:transparent;color:var(--g600);font-size:24px;line-height:1}.form-group{display:grid;gap:8px;margin-bottom:18px}.form-label{font-size:13px;font-weight:700}.file-row{display:flex;align-items:center}.file-row input{min-width:0;flex:1;border-radius:9px 0 0 9px}.suffix{height:42px;padding:0 12px;display:flex;align-items:center;background:var(--g100);border:1px solid var(--g200);border-left:0;border-radius:0 9px 9px 0;color:var(--g600);font-size:14px}.radio-list{display:grid;grid-template-columns:1fr 1fr;gap:8px}.radio-card{position:relative}.radio-card input{position:absolute;opacity:0}.radio-card span{height:44px;border:1px solid var(--g200);border-radius:9px;display:grid;place-items:center;font-size:14px;font-weight:600;color:var(--g700)}.radio-card input:checked+span{border-color:var(--black);background:var(--black);color:var(--white)}.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:24px}.modal-btn{height:44px;border-radius:9px;padding:0 17px;font-weight:700;border:1px solid var(--g200);background:var(--white);color:var(--black)}.modal-btn.primary{border-color:var(--black);background:var(--black);color:var(--white)}.switch-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0 18px}.switch-row+.switch-row{border-top:1px solid var(--g200);padding-top:18px}.switch{position:relative;width:48px;height:28px}.switch input{opacity:0}.slider{position:absolute;inset:0;border-radius:99px;background:var(--g200);transition:background var(--ease)}.slider:before{content:"";position:absolute;width:22px;height:22px;left:3px;top:3px;border-radius:50%;background:var(--white);transition:transform var(--ease),background var(--ease);box-shadow:0 1px 4px rgba(0,0,0,.28)}.switch input:checked+.slider{background:var(--black)}.switch input:checked+.slider:before{transform:translateX(20px)}.danger{color:var(--red);border-color:color-mix(in srgb,var(--red) 35%,var(--g200));background:var(--white)}.privacy-note{font-size:12px;line-height:1.55;color:var(--g600);background:var(--g50);padding:12px;border-radius:9px}.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,14px);opacity:0;pointer-events:none;padding:11px 15px;border-radius:9px;background:var(--black);color:var(--white);font-size:13px;font-weight:600;transition:all var(--ease);z-index:20}.toast.show{opacity:1;transform:translate(-50%,0)}
+    @media(max-width:620px){.shell{width:min(100% - 24px,860px);padding-bottom:28px}.header{height:64px}.toolbar{margin-top:6px}.editor{height:320px;padding:16px;font-size:15px}.stats{align-items:flex-start;flex-wrap:wrap;gap:14px}.counts{width:100%;justify-content:space-between;gap:12px}.limit{width:100%}.limit-label{text-align:left}.replace-box{grid-template-columns:1fr}.primary-actions{grid-template-columns:minmax(0,1.7fr) minmax(116px,1fr)}.action{height:50px;font-size:14px}.result-head{align-items:flex-start;gap:10px;flex-direction:column}.radio-list{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="header">
+      <div class="brand-lockup"><div class="brand" aria-label="Textkit">textkit.</div><span class="app-version" id="appVersion"></span></div>
+      <div class="header-actions">
+        <button class="icon-btn" id="pipBtn" aria-label="미니창 열기" title="미니창 열기"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><rect x="12" y="11" width="7" height="5" rx="1" fill="currentColor" stroke="none"/></svg></button>
+        <button class="icon-btn" id="settingsBtn" aria-label="설정 열기" title="설정"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.12 2.12-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V20h-3v-.09A1.7 1.7 0 0 0 10.65 18.35a1.7 1.7 0 0 0-1.88.34l-.06.06-2.12-2.12.06-.06A1.7 1.7 0 0 0 7 14.69a1.7 1.7 0 0 0-1.56-1.03H5.3v-3h.09A1.7 1.7 0 0 0 6.95 9.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.12-2.12.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 11.64 4.4V4.3h3v.09a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.12 2.12-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.56 1.03H21v3h-.09A1.7 1.7 0 0 0 19.4 15Z"/></svg></button>
+      </div>
+    </header>
+
+    <nav class="tabs" role="tablist" aria-label="Textkit 도구">
+      <button class="tab active" id="textTab" role="tab" aria-selected="true" aria-controls="textPanel">텍스트 도구</button>
+      <button class="tab" id="webpTab" role="tab" aria-selected="false" aria-controls="webpPanel">Animated WebP</button>
+      <button class="tab" id="docTab" role="tab" aria-selected="false" aria-controls="docPanel">문서 → MD</button>
+    </nav>
+
+    <section class="tab-panel" id="textPanel" role="tabpanel" aria-labelledby="textTab">
+    <div class="toolbar"><label class="type-wrap"><span class="eyebrow">작업 유형</span><select id="taskType"><option value="free">자유 입력</option><option value="character">캐릭터 프롬프트 · 8,000자</option><option value="scene">첫장면 · 1,000자</option><option value="guide">첫장면 AI 가이드 · 500자</option><option value="reply">유저 추천답변 · 200자</option></select></label></div>
+    <textarea class="editor" id="editor" placeholder="글자를 입력하거나 붙여넣어 주세요." spellcheck="true" aria-label="텍스트 입력"></textarea>
+    <section class="stats" aria-live="polite">
+      <div class="counts"><div class="count"><span class="count-label">공백 포함</span><strong class="count-value" id="countAll">0자</strong></div><div class="count"><span class="count-label">공백 제외</span><strong class="count-value" id="countNoSpace">0자</strong></div></div>
+      <div class="limit" id="limitBox"><div class="limit-label" id="limitLabel">8,000자 남음</div><div class="track"><div class="bar" id="progressBar"></div></div></div>
+    </section>
+
+    <section class="tools"><div class="section-row"><h2 class="section-title">빠른 정리</h2><button class="more-btn" id="moreBtn" aria-expanded="false">더보기 ↓</button></div>
+      <div class="tool-grid" id="mainTools"><button class="chip" data-tool="prompt">프롬프트 정리</button><button class="chip" data-tool="spaces">띄어쓰기 제거</button><button class="chip" data-tool="blankLines">빈 줄 제거</button></div>
+      <div class="tool-grid extra-tools" id="extraTools" hidden><button class="chip" data-tool="lineBreaks">줄바꿈 제거</button><button class="chip" data-tool="allWhitespace">전체 공백 제거</button><button class="chip" data-tool="normalize">공백 정돈</button><button class="chip" data-tool="replace">단어 일괄 치환</button></div>
+      <div class="replace-box" id="replaceBox" hidden><label>찾을 문자열<input class="text-input" id="findText" type="text" autocomplete="off"></label><label>바꿀 문자열<input class="text-input" id="replaceText" type="text" autocomplete="off"></label></div>
+    </section>
+
+    <section class="result" id="resultBox" hidden><div class="result-head"><div class="result-title-wrap"><span class="success-dot" aria-hidden="true">✓</span><h2>정리 결과</h2></div><span class="result-meta" id="resultMeta">0자 · 변동 없음</span></div><div class="result-text" id="resultText" tabindex="0"></div><div class="result-actions"><button class="apply-btn" id="applyBtn">원문에 적용</button></div></section>
+    <div class="primary-actions"><button class="action copy-btn" id="copyBtn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg><span>텍스트 복사</span></button><button class="action save-btn" id="saveBtn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"/></svg><span data-save-label>.MD 저장</span></button></div>
+    </section>
+
+    <section class="tab-panel" id="webpPanel" role="tabpanel" aria-labelledby="webpTab" hidden>
+      <div class="webp-intro"><h1>Animated WebP Maker</h1><p>이미지를 원하는 순서와 속도로 편집해 브라우저 안에서 Animated WebP를 만드세요.</p></div>
+      <section class="upload-zone" id="dropZone" aria-label="이미지 업로드 영역">
+        <div id="uploadCopy"><div><div class="upload-icon" aria-hidden="true">＋</div><div class="upload-title">이미지를 놓거나 선택해 주세요</div><div class="upload-note">PNG, JPG/JPEG, 정적 WebP · 여러 파일 선택 가능</div></div></div>
+        <input class="sr-only" id="frameFiles" type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" multiple>
+        <button class="secondary-small" id="pickFrames" type="button">파일 선택</button>
+      </section>
+
+      <div class="webp-workspace" id="webpWorkspace" hidden>
+        <div class="webp-quickbar"><span class="webp-summary" id="frameSummary">0개 프레임</span><button class="secondary-small" id="sortFrames" type="button">파일명순 정렬</button></div>
+        <div class="webp-grid">
+          <section class="webp-card"><h2 class="webp-card-title">프레임 및 DELAY</h2>
+            <div class="delay-controls">
+              <label class="field"><span class="field-label">기본 DELAY (ms)</span><input id="defaultDelay" inputmode="numeric" value="1200"><span class="field-error" id="defaultDelayError"></span></label>
+              <button class="apply-delay" id="applyAllDelay" type="button">전체 적용</button>
+              <label class="field"><span class="field-label">마지막 DELAY (ms)</span><input id="lastDelay" inputmode="numeric" value="900"><span class="field-error" id="lastDelayError"></span></label>
+              <button class="apply-delay" id="applyLastDelay" type="button">마지막에 적용</button>
+            </div>
+            <div class="frame-list" id="frameList" aria-live="polite"></div>
+          </section>
+
+          <aside class="webp-card preview-card"><h2 class="webp-card-title">애니메이션 미리보기</h2>
+            <div class="preview-stage"><canvas id="previewCanvas" width="400" height="400" aria-label="애니메이션 미리보기"></canvas></div>
+            <div class="preview-controls"><div class="preview-controls-left"><button class="preview-button" id="previewPlay" type="button">일시정지</button><button class="preview-button" id="previewRestart" type="button">처음부터</button></div><span class="preview-status" id="previewStatus">0 / 0</span></div>
+            <label class="preview-loop"><input id="previewLoop" type="checkbox" checked> 미리보기 반복 재생</label>
+            <div class="webp-summary" id="totalDuration" style="margin-top:10px">전체 재생 시간 0초</div>
+          </aside>
+        </div>
+
+        <section class="webp-card settings-card"><h2 class="webp-card-title">출력 설정</h2>
+          <div class="settings-grid">
+            <label class="field"><span class="field-label">출력 크기</span><select id="sizeMode"><option value="first">첫 프레임 기준</option><option value="custom">사용자 지정</option></select></label>
+            <label class="field"><span class="field-label">너비 (px)</span><input id="outputWidth" type="number" min="1" max="4096" disabled></label>
+            <label class="field"><span class="field-label">높이 (px)</span><input id="outputHeight" type="number" min="1" max="4096" disabled></label>
+            <label class="field"><span class="field-label">이미지 맞춤</span><select id="fitMode"><option value="fit">Fit · 전체 표시</option><option value="fill">Fill · 영역 채우기</option></select></label>
+            <label class="field"><span class="field-label">배경</span><select id="backgroundMode"><option value="transparent">투명</option><option value="white">흰색</option><option value="black">검은색</option><option value="custom">사용자 지정</option></select></label>
+            <label class="field"><span class="field-label">사용자 지정 색상</span><input class="custom-color" id="customColor" type="color" value="#ffffff" hidden></label>
+            <label class="field setting-span-2"><span class="field-label">품질</span><span class="range-row"><input id="quality" type="range" min="1" max="100" value="85"><output class="range-value" id="qualityValue">85</output></span></label>
+            <div class="field setting-span-2"><span class="field-label">반복</span><label class="preview-loop" style="margin-top:0"><input id="loopInfinite" type="checkbox" checked> 무한 반복</label></div>
+            <label class="field"><span class="field-label">반복 횟수</span><input id="loopCount" type="number" min="1" max="65535" value="1" disabled></label>
+            <label class="field"><span class="field-label">파일명</span><input id="webpFileName" value="animation.webp"></label>
+          </div>
+          <div class="generate-row"><button class="generate-btn" id="generateWebp" type="button">WebP 생성 및 저장</button><div class="generate-meta">브라우저에서만 처리 · 서버 전송 없음</div></div>
+          <div class="encode-progress"><div class="encode-progress-bar" id="encodeProgressBar"></div></div><div class="encode-status" id="encodeStatus" role="status"></div>
+          <div class="webp-result" id="webpResult" hidden><img id="webpResultImage" alt="생성된 Animated WebP 미리보기"><div class="webp-result-info"><div class="webp-result-title">Animated WebP 생성 완료</div><div class="webp-result-meta" id="webpResultMeta"></div></div><a class="download-result" id="webpResultDownload">다시 다운로드</a></div>
+          <p class="webp-memory-note">업로드 이미지는 브라우저 메모리에만 보관되며 새로고침하면 사라질 수 있습니다.</p>
+        </section>
+      </div>
+    </section>
+
+    <section class="tab-panel doc-panel" id="docPanel" role="tabpanel" aria-labelledby="docTab" hidden>
+      <div class="doc-intro"><h1>문서 → MD</h1><p>Google Docs에서 복사한 문서를 서식 그대로 확인하고, 원하는 이름과 위치에 Markdown으로 저장하세요.</p></div>
+
+      <section class="doc-file-settings" aria-label="파일명 설정">
+        <label class="field"><span class="field-label">작품 이름</span><input id="docProjectName" placeholder="작품 이름을 입력하세요" autocomplete="off"></label>
+        <label class="field"><span class="field-label">문서 종류</span><select id="docType"><option value="character">캐릭터 설정</option><option value="direction">방향성_줄거리</option><option value="prompt">캐릭터 프롬프트</option><option value="scene">첫장면</option><option value="detail">상세페이지</option><option value="custom">기타 (직접 입력)</option></select></label>
+        <label class="field doc-custom-type" id="docCustomTypeWrap" hidden><span class="field-label">기타 문서 종류</span><input id="docCustomType" placeholder="문서 종류를 입력하세요" autocomplete="off"></label>
+        <label class="field"><span class="field-label">저장 파일명</span><span class="doc-filename-row"><input id="docFileName" autocomplete="off"><button class="doc-auto-name" id="docAutoName" type="button">자동 이름 사용</button></span><span class="doc-name-hint">직접 수정한 파일명은 작품명이나 문서 종류를 바꿔도 덮어쓰지 않습니다.</span></label>
+      </section>
+
+      <section class="doc-editor-shell" aria-label="서식 있는 문서 편집기">
+        <div class="doc-toolbar" role="toolbar" aria-label="문서 서식 도구">
+          <label><span class="sr-only">문단 스타일</span><select id="docBlockStyle"><option value="p">일반 텍스트</option><option value="h1">제목 1</option><option value="h2">제목 2</option><option value="h3">제목 3</option><option value="h4">제목 4</option><option value="h5">제목 5</option><option value="h6">제목 6</option><option value="blockquote">인용문</option><option value="pre">코드블록</option></select></label>
+          <span class="doc-toolbar-separator" aria-hidden="true"></span>
+          <button class="doc-tool" type="button" data-doc-command="bold" aria-label="굵게" title="굵게 (Cmd/Ctrl+B)">B</button>
+          <button class="doc-tool" type="button" data-doc-command="italic" aria-label="기울임" title="기울임 (Cmd/Ctrl+I)"><em>I</em></button>
+          <button class="doc-tool" type="button" data-doc-command="strikeThrough" aria-label="취소선" title="취소선"><s>S</s></button>
+          <span class="doc-toolbar-separator" aria-hidden="true"></span>
+          <button class="doc-tool wide" type="button" data-doc-command="insertUnorderedList" aria-label="글머리 기호 목록">• 목록</button>
+          <button class="doc-tool wide" type="button" data-doc-command="insertOrderedList" aria-label="번호 목록">1. 목록</button>
+          <span class="doc-toolbar-separator" aria-hidden="true"></span>
+          <button class="doc-tool doc-indent-tool" type="button" data-doc-command="outdent" aria-label="내어쓰기" title="내어쓰기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6h11M10 10h11M10 14h11M3 18h18M7 10 3 13l4 3z"/></svg></button>
+          <button class="doc-tool doc-indent-tool" type="button" data-doc-command="indent" aria-label="들여쓰기" title="들여쓰기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6h11M10 10h11M10 14h11M3 18h18M3 10l4 3-4 3z"/></svg></button>
+          <span class="doc-toolbar-separator" aria-hidden="true"></span>
+          <button class="doc-tool" id="docLink" type="button" aria-label="링크 삽입" title="링크 삽입">↗</button>
+          <button class="doc-tool" id="docHr" type="button" aria-label="구분선 삽입" title="구분선">―</button>
+          <button class="doc-tool wide" id="docTable" type="button" aria-label="표 삽입">표</button>
+        </div>
+        <div class="doc-paper-wrap"><div class="doc-editor" id="docEditor" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="true" data-placeholder="Google Docs에서 문서 내용을 복사해 여기에 붙여넣으세요."></div></div>
+      </section>
+      <div class="doc-warning" id="docWarning" role="status"></div>
+      <div class="doc-footer-row"><button class="doc-clear" id="docClear" type="button">문서 지우기</button><span class="doc-privacy">본문은 자동 저장되지 않으며 외부 서버로 전송되지 않습니다.</span></div>
+
+      <div class="doc-actions"><button class="doc-preview-toggle" id="docPreviewToggle" type="button">Markdown 원문 보기</button><button class="doc-save" id="docSave" type="button">.MD로 저장</button></div>
+      <section class="md-preview" id="docMarkdownPreview" hidden><div class="md-preview-head"><span class="md-preview-title">Markdown 원문</span><button class="md-copy" id="docMarkdownCopy" type="button">원문 전체 복사</button></div><pre class="md-source" id="docMarkdownSource" aria-label="변환된 Markdown 원문"></pre></section>
+    </section>
+
+    <footer class="footer"><span>© 2026 sg9us</span></footer>
+  </main>
+
+  <dialog id="saveDialog"><form class="modal" id="saveForm"><div class="modal-head"><h2>.MD 저장</h2><button class="close" type="button" data-close="saveDialog" aria-label="닫기">×</button></div><label class="form-group"><span class="form-label">파일명</span><span class="file-row"><input class="text-input" id="fileName" required autocomplete="off"><span class="suffix">.md</span></span></label><p class="privacy-note">이 브라우저에서는 시스템 저장 창을 지원하지 않습니다. 파일은 브라우저의 다운로드 설정에 따라 저장되며, 설정에 따라 위치 선택 창이 표시될 수 있습니다.</p><div class="modal-actions"><button class="modal-btn" type="button" data-close="saveDialog">취소</button><button class="modal-btn primary" type="submit">다운로드</button></div></form></dialog>
+  <dialog id="settingsDialog"><div class="modal"><div class="modal-head"><h2>설정</h2><button class="close" type="button" data-close="settingsDialog" aria-label="닫기">×</button></div><div class="switch-row"><div><div class="form-label">자동 임시 저장</div><div style="font-size:12px;color:var(--g600);margin-top:4px">이 브라우저에만 저장합니다.</div></div><label class="switch"><input id="autosave" type="checkbox"><span class="slider"></span></label></div><div class="switch-row"><div><div class="form-label">다크 모드</div><div style="font-size:12px;color:var(--g600);margin-top:4px">모든 도구와 미니창에 적용합니다.</div></div><label class="switch"><input id="themeToggle" type="checkbox" aria-label="다크 모드"><span class="slider"></span></label></div><p class="privacy-note">테마 설정은 이 브라우저에 저장됩니다. 입력한 텍스트는 외부 서버로 전송되지 않습니다.</p><div class="modal-actions"><button class="modal-btn danger" id="clearSaved" type="button">저장된 입력 삭제</button><button class="modal-btn primary" type="button" data-close="settingsDialog">완료</button></div></div></dialog>
+  <dialog id="docSaveDialog"><form class="modal" id="docSaveForm"><div class="modal-head"><h2>.MD로 저장</h2><button class="close" type="button" data-close="docSaveDialog" aria-label="닫기">×</button></div><label class="form-group"><span class="form-label">파일명</span><span class="file-row"><input class="text-input" id="docFallbackName" required autocomplete="off"><span class="suffix">.md</span></span></label><p class="privacy-note">이 브라우저에서는 시스템 저장 창을 지원하지 않습니다. 파일은 브라우저 다운로드 설정에 따라 저장되며, 설정에 따라 저장 위치 선택 창이 표시될 수 있습니다.</p><div class="modal-actions"><button class="modal-btn" type="button" data-close="docSaveDialog">취소</button><button class="modal-btn primary" type="submit">다운로드</button></div></form></dialog>
+  <div class="toast" id="toast" role="status"></div>
+
+  <script src="./js/config.js"></script>
+  <script>
+  (()=>{
+    'use strict';
+    const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+    const limits={free:null,character:8000,scene:1000,guide:500,reply:200};
+    const DEFAULT_MD_NAME='캐릭터_프롬프트.md';
+    const editor=$('#editor'), taskType=$('#taskType'), resultBox=$('#resultBox'), resultText=$('#resultText'), resultMeta=$('#resultMeta');
+    const APP_VERSION=window.TEXTKIT_CONFIG.version;
+    const pipSupported='documentPictureInPicture' in window;
+    let activeTool=null, currentResult='', pipWindow=null, toastTimer, webpLoaded=false, docLoaded=false;
+    const chars=s=>Array.from(s).length;
+    const withoutWhitespace=s=>chars(s.replace(/\s/gu,''));
+    const format=n=>n.toLocaleString('ko-KR');
+    const state={autosave:localStorage.getItem('textkit.autosave')==='true',theme:localStorage.getItem('textkit.theme')==='dark'?'dark':'light'};
+
+    function updateCounts(){
+      const n=chars(editor.value), no=withoutWhitespace(editor.value), limit=limits[taskType.value];
+      $('#countAll').textContent=`${format(n)}자`; $('#countNoSpace').textContent=`${format(no)}자`;
+      $('#limitBox').hidden=limit===null;
+      if(limit!==null){const diff=limit-n, over=diff<0, pct=Math.min(100,(n/limit)*100);$('#limitLabel').textContent=over?`${format(-diff)}자 초과`:`${format(diff)}자 남음`;$('#limitLabel').classList.toggle('over',over);$('#progressBar').style.width=`${pct}%`;$('#progressBar').classList.toggle('over',over)}
+      if(activeTool)renderResult(); if(state.autosave)localStorage.setItem('textkit.draft',editor.value); syncPip();
+    }
+    function processPrompt(text){
+      const blocks=text.split(/(```[\s\S]*?```)/g);
+      return blocks.map((part,i)=>i%2?part:part.split('\n').map(line=>{if(/^\s*#{1,6}\s+/.test(line))return line.trim();return line.trim().replace(/[ \t]+/g,' ')}).filter(line=>line!=='').join('\n')).join('\n').replace(/\n{2,}/g,'\n');
+    }
+    const transforms={prompt:processPrompt,spaces:t=>t.replace(/[ \t]/g,''),blankLines:t=>t.split('\n').filter(l=>l.trim()!=='').join('\n'),lineBreaks:t=>t.replace(/\s*\r?\n\s*/g,' ').replace(/ {2,}/g,' '),allWhitespace:t=>t.replace(/\s/gu,''),normalize:t=>t.split('\n').map(l=>l.trim().replace(/[ \t]+/g,' ')).join('\n'),replace:t=>{const f=$('#findText').value;return f?t.split(f).join($('#replaceText').value):t}};
+    function renderResult(){currentResult=transforms[activeTool](editor.value);resultText.textContent=currentResult;const delta=chars(editor.value)-chars(currentResult);resultMeta.textContent=`${format(chars(currentResult))}자 · ${delta>0?`${format(delta)}자 감소`:delta<0?`${format(-delta)}자 증가`:'변동 없음'}`}
+    function selectTool(tool,button){
+      if(activeTool===tool){activeTool=null;$$('.chip').forEach(b=>b.classList.remove('active'));resultBox.hidden=true;$('#replaceBox').hidden=true;syncPip();return}
+      activeTool=tool;$$('.chip').forEach(b=>b.classList.toggle('active',b===button));$('#replaceBox').hidden=tool!=='replace';resultBox.hidden=false;renderResult();resultBox.scrollIntoView({behavior:'smooth',block:'nearest'});syncPip();
+    }
+    function replaceEditorValue(value){editor.focus();editor.setSelectionRange(0,editor.value.length);if(!document.execCommand('insertText',false,value)){editor.setRangeText(value,0,editor.value.length,'end')}editor.dispatchEvent(new Event('input',{bubbles:true}))}
+    function currentText(){return activeTool?currentResult:editor.value}
+    function notify(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2200)}
+    async function switchTab(target){
+      const tabs={text:['#textTab','#textPanel'],webp:['#webpTab','#webpPanel'],doc:['#docTab','#docPanel']};
+      Object.entries(tabs).forEach(([name,[tab,panel]])=>{const active=name===target;$(panel).hidden=!active;$(tab).classList.toggle('active',active);$(tab).setAttribute('aria-selected',String(active))});
+      $('#pipBtn').disabled=target!=='text'||!pipSupported;$('#pipBtn').title=target!=='text'?'미니창은 텍스트 도구 전용입니다.':pipSupported?'미니창 열기':'이 브라우저에서는 Document PiP를 지원하지 않습니다.';
+      if(target==='webp'&&!webpLoaded){try{const module=await import('./js/webp-maker.js');module.initWebPMaker({notify});webpLoaded=true}catch(error){notify('Animated WebP 모듈을 불러오지 못했습니다. localhost로 실행해 주세요.');console.error(error)}}
+      if(target==='doc'&&!docLoaded){try{const module=await import('./js/doc-md.js');module.initDocumentMd({notify});docLoaded=true}catch(error){notify('문서 → MD 모듈을 불러오지 못했습니다. localhost로 실행해 주세요.');console.error(error)}}
+    }
+    async function copyText(text,button=$('#copyBtn')){try{await navigator.clipboard.writeText(text)}catch{const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.append(ta);ta.select();document.execCommand('copy');ta.remove()}button.classList.add('success');const span=button.querySelector('span');if(span)span.textContent='복사 완료';setTimeout(()=>{button.classList.remove('success');if(span)span.textContent='텍스트 복사'},1600)}
+    function safeMdName(name){const base=name.trim().replace(/(?:\.md)+$/i,'').replace(/[\\/:*?"<>|]+/g,'').slice(0,80)||'캐릭터_프롬프트';return `${base}.md`}
+    function downloadMd(name,text){const blob=new Blob([text],{type:'text/markdown;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=safeMdName(name);a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+    function setSaveFeedback(button){if(!button)return;const label=button.querySelector('[data-save-label]');if(!label)return;label.textContent='저장 완료';button.style.color='var(--green)';setTimeout(()=>{label.textContent='.MD 저장';button.style.color=''},1500)}
+    async function requestMdSave(button=$('#saveBtn'),pickerWindow=window){
+      if(typeof pickerWindow.showSaveFilePicker!=='function'){$('#fileName').value=DEFAULT_MD_NAME.replace(/\.md$/i,'');$('#saveDialog').showModal();window.focus();return}
+      try{const handle=await pickerWindow.showSaveFilePicker({suggestedName:DEFAULT_MD_NAME,types:[{description:'Markdown 문서',accept:{'text/markdown':['.md']}}],excludeAcceptAllOption:false});const writable=await handle.createWritable();await writable.write(new Blob([currentText()],{type:'text/markdown;charset=utf-8'}));await writable.close();notify('저장 완료');setSaveFeedback(button)}catch(error){if(error?.name==='AbortError')return;const reason=error?.name==='NotAllowedError'?'파일 저장 권한이 허용되지 않았습니다.':error?.message||'파일을 저장하지 못했습니다.';notify(`저장 실패: ${reason}`)}
+    }
+    function savePreferences(){localStorage.setItem('textkit.taskType',taskType.value);localStorage.setItem('textkit.autosave',String(state.autosave));localStorage.setItem('textkit.theme',state.theme)}
+    function applyTheme(theme){state.theme=theme;document.documentElement.dataset.theme=theme;$('#themeToggle').checked=theme==='dark';savePreferences();if(pipWindow&&!pipWindow.closed)pipWindow.document.documentElement.dataset.theme=theme}
+    function syncPip(){if(!pipWindow||pipWindow.closed)return;const d=pipWindow.document,pe=d.querySelector('#pipEditor');d.documentElement.dataset.theme=state.theme;if(pe&&d.activeElement!==pe)pe.value=editor.value;const target=currentText(),n=chars(target),limit=limits[taskType.value];d.querySelector('#pAll').textContent=`${format(n)}자`;d.querySelector('#pNo').textContent=`${format(withoutWhitespace(target))}자`;d.querySelector('#pMode').textContent=activeTool?'정리 결과 기준':'원문 기준';d.querySelector('#pPrompt').classList.toggle('active',activeTool==='prompt');const pb=d.querySelector('#pLimit');pb.hidden=limit===null;if(limit!==null){const diff=limit-n;d.querySelector('#pRemain').textContent=diff<0?`${format(-diff)}자 초과`:`${format(diff)}자 남음`;d.querySelector('#pRemain').style.color=diff<0?'var(--red)':'var(--g600)';const bar=d.querySelector('#pBar');bar.style.width=`${Math.min(100,n/limit*100)}%`;bar.style.background=diff<0?'var(--red)':'var(--black)'}}
+    async function openPip(){
+      if(!('documentPictureInPicture' in window)){notify('이 브라우저는 미니창을 지원하지 않습니다.');return}
+      if(pipWindow&&!pipWindow.closed){pipWindow.focus();return}
+      try{pipWindow=await window.documentPictureInPicture.requestWindow({width:430,height:680});const d=pipWindow.document;d.documentElement.dataset.theme=state.theme;d.head.innerHTML=`<title>Textkit 미니창</title><style>${document.querySelector('style').textContent}body{background:var(--white)}.pip{padding:16px}.pip-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.pip textarea{height:300px}.pip .stats{padding-inline:2px}.pip .counts{width:100%}.pip .limit{width:100%}.pip-tools{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px}.pip-mode{font-size:12px;color:var(--g600)}.pip .primary-actions{grid-template-columns:minmax(0,1.7fr) minmax(120px,1fr);margin-top:12px}.pip .action{width:100%;height:48px}</style>`;d.body.innerHTML=`<main class="pip"><div class="pip-head"><div class="brand">textkit.</div><span class="eyebrow">미니창</span></div><textarea id="pipEditor" class="editor" placeholder="글자를 입력하거나 붙여넣어 주세요."></textarea><section class="stats"><div class="counts"><div class="count"><span class="count-label">공백 포함</span><strong class="count-value" id="pAll">0자</strong></div><div class="count"><span class="count-label">공백 제외</span><strong class="count-value" id="pNo">0자</strong></div></div><div class="limit" id="pLimit"><div class="limit-label" id="pRemain"></div><div class="track"><div class="bar" id="pBar"></div></div></div></section><div class="pip-tools"><button class="chip" id="pPrompt">프롬프트 정리</button><span class="pip-mode" id="pMode">원문 기준</span></div><div class="primary-actions"><button class="action copy-btn" id="pCopy"><span>텍스트 복사</span></button><button class="action save-btn" id="pSave"><span data-save-label>.MD 저장</span></button></div></main>`;const pe=d.querySelector('#pipEditor');pe.value=editor.value;pe.addEventListener('input',()=>{replaceEditorValue(pe.value)});d.querySelector('#pPrompt').addEventListener('click',()=>selectTool('prompt',$('[data-tool="prompt"]')));d.querySelector('#pCopy').addEventListener('click',()=>copyText(currentText(),d.querySelector('#pCopy')));d.querySelector('#pSave').addEventListener('click',()=>requestMdSave(d.querySelector('#pSave'),pipWindow));pipWindow.addEventListener('pagehide',()=>{pipWindow=null});syncPip()}catch(e){notify('미니창을 열 수 없습니다. 보안 연결 또는 권한을 확인해 주세요.')}
+    }
+    editor.addEventListener('input',updateCounts);taskType.addEventListener('change',()=>{savePreferences();updateCounts()});
+    $$('.chip').forEach(b=>b.addEventListener('click',()=>selectTool(b.dataset.tool,b)));['findText','replaceText'].forEach(id=>$(`#${id}`).addEventListener('input',()=>{if(activeTool==='replace')renderResult()}));
+    $('#moreBtn').addEventListener('click',e=>{const open=$('#extraTools').hidden;$('#extraTools').hidden=!open;e.currentTarget.textContent=open?'접기 ↑':'더보기 ↓';e.currentTarget.setAttribute('aria-expanded',open)});
+    $('#applyBtn').addEventListener('click',()=>{replaceEditorValue(currentResult);notify('정리 결과를 원문에 적용했습니다. 실행 취소(Ctrl/⌘+Z)할 수 있어요.')});
+    $('#copyBtn').addEventListener('click',()=>copyText(currentText()));
+    $('#saveBtn').addEventListener('click',()=>requestMdSave($('#saveBtn')));
+    $('#saveForm').addEventListener('submit',e=>{e.preventDefault();downloadMd($('#fileName').value,currentText());$('#saveDialog').close();notify('다운로드를 시작했습니다. 저장 위치는 브라우저 설정을 따릅니다.')});
+    $('#settingsBtn').addEventListener('click',()=>$('#settingsDialog').showModal());$('#autosave').addEventListener('change',e=>{state.autosave=e.target.checked;savePreferences();if(state.autosave)localStorage.setItem('textkit.draft',editor.value);else localStorage.removeItem('textkit.draft')});$('#themeToggle').addEventListener('change',e=>applyTheme(e.target.checked?'dark':'light'));
+    $('#clearSaved').addEventListener('click',()=>{localStorage.removeItem('textkit.draft');notify('저장된 입력 내용을 삭제했습니다.')});$$('[data-close]').forEach(b=>b.addEventListener('click',()=>document.getElementById(b.dataset.close).close()));
+    $('#pipBtn').addEventListener('click',openPip);
+    $('#textTab').addEventListener('click',()=>switchTab('text'));$('#webpTab').addEventListener('click',()=>switchTab('webp'));$('#docTab').addEventListener('click',()=>switchTab('doc'));
+    taskType.value=localStorage.getItem('textkit.taskType')||'character';$('#autosave').checked=state.autosave;$('#themeToggle').checked=state.theme==='dark';document.documentElement.dataset.theme=state.theme;if(state.autosave)editor.value=localStorage.getItem('textkit.draft')||'';
+    $('#appVersion').textContent=`v${APP_VERSION}`;$('meta[name="application-version"]').content=APP_VERSION;
+    if(!pipSupported){$('#pipBtn').disabled=true;$('#pipBtn').title='이 브라우저에서는 Document PiP를 지원하지 않습니다.'}
+    function registerAppServiceWorker(){
+      if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
+      const hadController=Boolean(navigator.serviceWorker.controller);let updateNotified=false;
+      const announceUpdate=()=>{if(hadController&&!updateNotified){updateNotified=true;notify('새 버전이 준비되었습니다. 페이지를 새로고침하면 적용됩니다.')}};
+      navigator.serviceWorker.register('./sw.js',{scope:'./',updateViaCache:'none'}).then(async registration=>{
+        try{await registration.update()}catch(error){console.warn('Service Worker 업데이트 확인 실패',error)}
+        if(registration.waiting)announceUpdate();
+        registration.addEventListener('updatefound',()=>{const worker=registration.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)announceUpdate()})});
+        navigator.serviceWorker.addEventListener('controllerchange',announceUpdate);
+      }).catch(error=>console.warn('Service Worker 등록 실패',error));
+    }
+    window.addEventListener('load',registerAppServiceWorker,{once:true});
+    updateCounts();
+  })();
+  </script>
+</body>
+</html>
