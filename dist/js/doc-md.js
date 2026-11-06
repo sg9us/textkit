@@ -1,7 +1,8 @@
 let initialized = false;
+let controller = null;
 
 export function initDocumentMd({ notify = () => {} } = {}) {
-  if (initialized) return;
+  if (initialized) return controller;
   initialized = true;
 
   const $ = (selector) => document.querySelector(selector);
@@ -15,6 +16,7 @@ export function initDocumentMd({ notify = () => {} } = {}) {
   };
 
   let fileNameManuallyEdited = false;
+  let pipBinding = null;
 
   const TYPE_LABELS = {
     character: '캐릭터 설정', direction: '방향성_줄거리', prompt: '캐릭터 프롬프트',
@@ -44,6 +46,7 @@ export function initDocumentMd({ notify = () => {} } = {}) {
     if (force || !fileNameManuallyEdited || !els.fileName.value.trim()) els.fileName.value = generatedFileName();
     localStorage.setItem('textkit.docProject', els.project.value);
     localStorage.setItem('textkit.docType', els.type.value);
+    syncPipFromMain();
   }
 
   function parseFontPixels(value) {
@@ -205,6 +208,7 @@ export function initDocumentMd({ notify = () => {} } = {}) {
     els.editor.focus();
     document.execCommand(command, false, value);
     refreshPreview();
+    syncPipFromMain();
   }
 
   function insertTable() {
@@ -218,29 +222,31 @@ export function initDocumentMd({ notify = () => {} } = {}) {
     exec('createLink', url);
   }
 
-  function setSaveFeedback() {
-    const original = els.save.textContent;
-    els.save.textContent = '✓ 저장 완료';
-    els.save.classList.add('success');
-    setTimeout(() => { els.save.textContent = original; els.save.classList.remove('success'); }, 1700);
+  function setSaveFeedback(button = els.save) {
+    const original = button.textContent;
+    button.textContent = '✓ 저장 완료';
+    button.classList.add('success');
+    setTimeout(() => { button.textContent = original; button.classList.remove('success'); }, 1700);
   }
 
-  async function saveMarkdown() {
+  async function saveMarkdown(pickerWindow = window, feedbackButton = els.save) {
     const markdown = currentMarkdown();
     if (!markdown.trim()) { notify('저장할 문서 내용을 붙여넣어 주세요.'); return; }
     const fileName = safeFileName(els.fileName.value || generatedFileName());
-    if (typeof window.showSaveFilePicker !== 'function') {
+    const pickerHost = typeof pickerWindow.showSaveFilePicker === 'function' ? pickerWindow : window;
+    if (typeof pickerHost.showSaveFilePicker !== 'function') {
       els.fallbackName.value = fileName.replace(/\.md$/i, '');
       els.fallbackDialog.showModal();
+      window.focus();
       return;
     }
     try {
-      const handle = await window.showSaveFilePicker({ suggestedName: fileName, types: [{ description: 'Markdown 문서', accept: { 'text/markdown': ['.md'] } }] });
+      const handle = await pickerHost.showSaveFilePicker({ suggestedName: fileName, types: [{ description: 'Markdown 문서', accept: { 'text/markdown': ['.md'] } }] });
       const writable = await handle.createWritable();
       await writable.write(new Blob([markdown], { type: 'text/markdown;charset=utf-8' }));
       await writable.close();
       notify('저장 완료');
-      setSaveFeedback();
+      setSaveFeedback(feedbackButton);
     } catch (error) {
       if (error?.name === 'AbortError') return;
       notify(`저장 실패: ${error?.message || '파일을 저장하지 못했습니다.'}`);
@@ -261,14 +267,108 @@ export function initDocumentMd({ notify = () => {} } = {}) {
     notify('다운로드를 시작했습니다. 저장 위치는 브라우저 설정을 따릅니다.');
   }
 
+  function syncPipFromMain() {
+    if (!pipBinding || pipBinding.win.closed) return;
+    const { doc, editor, project, type, customType, customWrap, fileName } = pipBinding;
+    if (doc.activeElement !== editor) editor.innerHTML = els.editor.innerHTML;
+    if (doc.activeElement !== project) project.value = els.project.value;
+    if (doc.activeElement !== type) type.value = els.type.value;
+    if (doc.activeElement !== customType) customType.value = els.customType.value;
+    customWrap.hidden = els.type.value !== 'custom';
+    if (doc.activeElement !== fileName) fileName.value = els.fileName.value;
+    const preview = doc.querySelector('#pDocMarkdownPreview');
+    if (preview && !preview.hidden) doc.querySelector('#pDocMarkdownSource').textContent = currentMarkdown();
+  }
+
+  function syncMainFromPipEditor(editor) {
+    els.editor.innerHTML = editor.innerHTML;
+    refreshPreview();
+    if (pipBinding && !pipBinding.win.closed) {
+      const preview = pipBinding.doc.querySelector('#pDocMarkdownPreview');
+      if (preview && !preview.hidden) pipBinding.doc.querySelector('#pDocMarkdownSource').textContent = currentMarkdown();
+    }
+  }
+
+  function attachPipWindow(pipWindow) {
+    const doc = pipWindow.document;
+    const editor = doc.querySelector('#pDocEditor');
+    const project = doc.querySelector('#pDocProject');
+    const type = doc.querySelector('#pDocType');
+    const customType = doc.querySelector('#pDocCustomType');
+    const customWrap = doc.querySelector('#pDocCustomWrap');
+    const fileName = doc.querySelector('#pDocFileName');
+    if (!editor || !project || !type || !customType || !customWrap || !fileName) return;
+    pipBinding = { win: pipWindow, doc, editor, project, type, customType, customWrap, fileName };
+    syncPipFromMain();
+
+    project.addEventListener('input', () => { els.project.value = project.value; updateGeneratedName(); });
+    type.addEventListener('change', () => { els.type.value = type.value; updateGeneratedName(); });
+    customType.addEventListener('input', () => { els.customType.value = customType.value; updateGeneratedName(); });
+    fileName.addEventListener('input', () => { fileNameManuallyEdited = true; els.fileName.value = fileName.value; });
+    fileName.addEventListener('blur', () => { els.fileName.value = safeFileName(fileName.value); fileName.value = els.fileName.value; });
+    doc.querySelector('#pDocAutoName').addEventListener('click', () => { fileNameManuallyEdited = false; updateGeneratedName(true); });
+
+    editor.addEventListener('paste', (event) => {
+      const html = event.clipboardData?.getData('text/html');
+      const plain = event.clipboardData?.getData('text/plain') || '';
+      event.preventDefault();
+      editor.focus();
+      if (html) {
+        doc.execCommand('insertHTML', false, sanitizeGoogleDocsHTML(html));
+        const warning = doc.querySelector('#pDocWarning');
+        warning.classList.toggle('show', /rowspan|colspan|font-size|color:/i.test(html));
+        warning.textContent = 'Google Docs 서식을 Markdown으로 표현 가능한 구조로 정리했습니다.';
+      } else doc.execCommand('insertText', false, plain);
+      syncMainFromPipEditor(editor);
+    });
+    editor.addEventListener('input', () => syncMainFromPipEditor(editor));
+
+    const pipExec = (command, value = null) => { editor.focus(); doc.execCommand(command, false, value); syncMainFromPipEditor(editor); };
+    doc.querySelector('#pDocBlockStyle').addEventListener('change', (event) => pipExec('formatBlock', event.target.value));
+    doc.querySelectorAll('[data-pdoc-command]').forEach((button) => button.addEventListener('click', () => pipExec(button.dataset.pdocCommand)));
+    doc.querySelector('#pDocHr').addEventListener('click', () => pipExec('insertHorizontalRule'));
+    doc.querySelector('#pDocTable').addEventListener('click', () => pipExec('insertHTML', '<table><thead><tr><th>제목 1</th><th>제목 2</th></tr></thead><tbody><tr><td>내용</td><td>내용</td></tr></tbody></table><p><br></p>'));
+    doc.querySelector('#pDocLink').addEventListener('click', () => {
+      const url = pipWindow.prompt('링크 주소를 입력하세요. (https:// 또는 mailto:)');
+      if (!url) return;
+      if (!/^(https?:|mailto:)/i.test(url)) { notify('안전한 링크 주소만 사용할 수 있습니다.'); return; }
+      pipExec('createLink', url);
+    });
+
+    const preview = doc.querySelector('#pDocMarkdownPreview');
+    const source = doc.querySelector('#pDocMarkdownSource');
+    const previewButton = doc.querySelector('#pDocPreview');
+    previewButton.addEventListener('click', () => {
+      const open = preview.hidden;
+      preview.hidden = !open;
+      previewButton.textContent = open ? 'Markdown 닫기' : 'Markdown 보기';
+      if (open) source.textContent = currentMarkdown();
+    });
+    doc.querySelector('#pDocCopy').addEventListener('click', async () => {
+      const markdown = currentMarkdown();
+      try { await pipWindow.navigator.clipboard.writeText(markdown); }
+      catch { const area = doc.createElement('textarea'); area.value = markdown; doc.body.append(area); area.select(); doc.execCommand('copy'); area.remove(); }
+      notify('Markdown 원문을 복사했습니다.');
+    });
+    doc.querySelector('#pDocClear').addEventListener('click', () => {
+      if (!editor.textContent.trim() || pipWindow.confirm('편집 중인 문서를 모두 지울까요? 이 작업은 되돌릴 수 없습니다.')) {
+        editor.innerHTML = '';
+        syncMainFromPipEditor(editor);
+        doc.querySelector('#pDocWarning').classList.remove('show');
+      }
+    });
+    doc.querySelector('#pDocSave').addEventListener('click', () => saveMarkdown(pipWindow, doc.querySelector('#pDocSave')));
+    pipWindow.addEventListener('pagehide', () => { if (pipBinding?.win === pipWindow) pipBinding = null; });
+  }
+
   els.project.value = localStorage.getItem('textkit.docProject') || '';
   els.type.value = localStorage.getItem('textkit.docType') || 'character';
   updateGeneratedName(true);
   els.project.addEventListener('input', () => updateGeneratedName());
   els.type.addEventListener('change', () => updateGeneratedName());
   els.customType.addEventListener('input', () => updateGeneratedName());
-  els.fileName.addEventListener('input', () => { fileNameManuallyEdited = true; });
-  els.fileName.addEventListener('blur', () => { els.fileName.value = safeFileName(els.fileName.value); });
+  els.fileName.addEventListener('input', () => { fileNameManuallyEdited = true; syncPipFromMain(); });
+  els.fileName.addEventListener('blur', () => { els.fileName.value = safeFileName(els.fileName.value); syncPipFromMain(); });
   els.autoName.addEventListener('click', () => { fileNameManuallyEdited = false; updateGeneratedName(true); });
 
   els.editor.addEventListener('paste', (event) => {
@@ -282,8 +382,9 @@ export function initDocumentMd({ notify = () => {} } = {}) {
       els.warning.textContent = 'Google Docs 서식을 Markdown으로 표현 가능한 구조로 정리했습니다. 병합 셀·글자색·사용자 지정 정렬은 원문 보기에서 확인해 주세요.';
     } else document.execCommand('insertText', false, plain);
     refreshPreview();
+    syncPipFromMain();
   });
-  els.editor.addEventListener('input', refreshPreview);
+  els.editor.addEventListener('input', () => { refreshPreview(); syncPipFromMain(); });
   els.blockStyle.addEventListener('change', () => exec('formatBlock', els.blockStyle.value));
   document.querySelectorAll('[data-doc-command]').forEach((button) => button.addEventListener('click', () => exec(button.dataset.docCommand)));
   $('#docLink').addEventListener('click', insertLink);
@@ -291,7 +392,9 @@ export function initDocumentMd({ notify = () => {} } = {}) {
   $('#docTable').addEventListener('click', insertTable);
   els.previewToggle.addEventListener('click', () => { const open = els.preview.hidden; els.preview.hidden = !open; els.previewToggle.textContent = open ? 'Markdown 원문 닫기' : 'Markdown 원문 보기'; if (open) els.source.textContent = currentMarkdown(); });
   els.copy.addEventListener('click', async () => { const markdown = currentMarkdown(); try { await navigator.clipboard.writeText(markdown); } catch { const area = document.createElement('textarea'); area.value = markdown; document.body.append(area); area.select(); document.execCommand('copy'); area.remove(); } notify('Markdown 원문을 복사했습니다.'); });
-  els.clear.addEventListener('click', () => { if (!els.editor.textContent.trim() || window.confirm('편집 중인 문서를 모두 지울까요? 이 작업은 되돌릴 수 없습니다.')) { els.editor.innerHTML = ''; refreshPreview(); els.warning.classList.remove('show'); } });
-  els.save.addEventListener('click', saveMarkdown);
+  els.clear.addEventListener('click', () => { if (!els.editor.textContent.trim() || window.confirm('편집 중인 문서를 모두 지울까요? 이 작업은 되돌릴 수 없습니다.')) { els.editor.innerHTML = ''; refreshPreview(); syncPipFromMain(); els.warning.classList.remove('show'); } });
+  els.save.addEventListener('click', () => saveMarkdown());
   els.fallbackForm.addEventListener('submit', fallbackDownload);
+  controller = { attachPipWindow, currentMarkdown, syncPipFromMain };
+  return controller;
 }

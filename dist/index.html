@@ -171,7 +171,7 @@
     const editor=$('#editor'), taskType=$('#taskType'), resultBox=$('#resultBox'), resultText=$('#resultText'), resultMeta=$('#resultMeta');
     const APP_VERSION=window.TEXTKIT_CONFIG.version;
     const pipSupported='documentPictureInPicture' in window;
-    let activeTool=null, currentResult='', pipWindow=null, toastTimer, webpLoaded=false, docLoaded=false;
+    let activeTool=null, currentResult='', pipWindow=null, toastTimer, webpLoaded=false, docLoaded=false, docController=null, currentTab='text';
     const chars=s=>Array.from(s).length;
     const withoutWhitespace=s=>chars(s.replace(/\s/gu,''));
     const format=n=>n.toLocaleString('ko-KR');
@@ -197,20 +197,27 @@
     function replaceEditorValue(value){editor.focus();editor.setSelectionRange(0,editor.value.length);if(!document.execCommand('insertText',false,value)){editor.setRangeText(value,0,editor.value.length,'end')}editor.dispatchEvent(new Event('input',{bubbles:true}))}
     function currentText(){return activeTool?currentResult:editor.value}
     function notify(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2200)}
+    async function ensureDocModule(){
+      if(docLoaded)return docController;
+      try{const module=await import('./js/doc-md.js');docController=module.initDocumentMd({notify});docLoaded=true;return docController}
+      catch(error){notify('.MD 파일 저장 모듈을 불러오지 못했습니다. localhost로 실행해 주세요.');console.error(error);return null}
+    }
     async function switchTab(target){
+      currentTab=target;
       const tabs={text:['#textTab','#textPanel'],webp:['#webpTab','#webpPanel'],doc:['#docTab','#docPanel']};
       Object.entries(tabs).forEach(([name,[tab,panel]])=>{const active=name===target;$(panel).hidden=!active;$(tab).classList.toggle('active',active);$(tab).setAttribute('aria-selected',String(active))});
-      $('#pipBtn').disabled=target!=='text'||!pipSupported;$('#pipBtn').title=target!=='text'?'미니창은 공백 제거 탭 전용입니다.':pipSupported?'미니창 열기':'이 브라우저에서는 Document PiP를 지원하지 않습니다.';
+      $('#pipBtn').disabled=target==='webp'||!pipSupported;$('#pipBtn').title=target==='webp'?'미니창은 공백 제거와 .MD 파일 저장 탭에서 사용할 수 있습니다.':pipSupported?'미니창 열기':'이 브라우저에서는 Document PiP를 지원하지 않습니다.';
       if(target==='webp'&&!webpLoaded){try{const module=await import('./js/webp-maker.js');module.initWebPMaker({notify});webpLoaded=true}catch(error){notify('Animated WebP 모듈을 불러오지 못했습니다. localhost로 실행해 주세요.');console.error(error)}}
-      if(target==='doc'&&!docLoaded){try{const module=await import('./js/doc-md.js');module.initDocumentMd({notify});docLoaded=true}catch(error){notify('.MD 파일 저장 모듈을 불러오지 못했습니다. localhost로 실행해 주세요.');console.error(error)}}
+      if(target==='doc')await ensureDocModule();
     }
     async function copyText(text,button=$('#copyBtn')){try{await navigator.clipboard.writeText(text)}catch{const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.append(ta);ta.select();document.execCommand('copy');ta.remove()}button.classList.add('success');const span=button.querySelector('span');if(span)span.textContent='복사 완료';setTimeout(()=>{button.classList.remove('success');if(span)span.textContent='텍스트 복사'},1600)}
     function safeMdName(name){const base=name.trim().replace(/(?:\.md)+$/i,'').replace(/[\\/:*?"<>|]+/g,'').slice(0,80)||'캐릭터_프롬프트';return `${base}.md`}
     function downloadMd(name,text){const blob=new Blob([text],{type:'text/markdown;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=safeMdName(name);a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
     function setSaveFeedback(button){if(!button)return;const label=button.querySelector('[data-save-label]');if(!label)return;label.textContent='저장 완료';button.style.color='var(--green)';setTimeout(()=>{label.textContent='.MD 파일로 저장';button.style.color=''},1500)}
     async function requestMdSave(button=$('#saveBtn'),pickerWindow=window){
-      if(typeof pickerWindow.showSaveFilePicker!=='function'){$('#fileName').value=DEFAULT_MD_NAME.replace(/\.md$/i,'');$('#saveDialog').showModal();window.focus();return}
-      try{const handle=await pickerWindow.showSaveFilePicker({suggestedName:DEFAULT_MD_NAME,types:[{description:'Markdown 문서',accept:{'text/markdown':['.md']}}],excludeAcceptAllOption:false});const writable=await handle.createWritable();await writable.write(new Blob([currentText()],{type:'text/markdown;charset=utf-8'}));await writable.close();notify('저장 완료');setSaveFeedback(button)}catch(error){if(error?.name==='AbortError')return;const reason=error?.name==='NotAllowedError'?'파일 저장 권한이 허용되지 않았습니다.':error?.message||'파일을 저장하지 못했습니다.';notify(`저장 실패: ${reason}`)}
+      const pickerHost=typeof pickerWindow.showSaveFilePicker==='function'?pickerWindow:window;
+      if(typeof pickerHost.showSaveFilePicker!=='function'){$('#fileName').value=DEFAULT_MD_NAME.replace(/\.md$/i,'');$('#saveDialog').showModal();window.focus();return}
+      try{const handle=await pickerHost.showSaveFilePicker({suggestedName:DEFAULT_MD_NAME,types:[{description:'Markdown 문서',accept:{'text/markdown':['.md']}}],excludeAcceptAllOption:false});const writable=await handle.createWritable();await writable.write(new Blob([currentText()],{type:'text/markdown;charset=utf-8'}));await writable.close();notify('저장 완료');setSaveFeedback(button)}catch(error){if(error?.name==='AbortError')return;const reason=error?.name==='NotAllowedError'?'파일 저장 권한이 허용되지 않았습니다.':error?.message||'파일을 저장하지 못했습니다.';notify(`저장 실패: ${reason}`)}
     }
     function savePreferences(){localStorage.setItem('textkit.taskType',taskType.value);localStorage.setItem('textkit.autosave',String(state.autosave));localStorage.setItem('textkit.theme',state.theme)}
     function applyTheme(theme){state.theme=theme;document.documentElement.dataset.theme=theme;$('#themeToggle').checked=theme==='dark';savePreferences();if(pipWindow&&!pipWindow.closed)pipWindow.document.documentElement.dataset.theme=theme}
@@ -218,7 +225,57 @@
     async function openPip(){
       if(!('documentPictureInPicture' in window)){notify('이 브라우저는 미니창을 지원하지 않습니다.');return}
       if(pipWindow&&!pipWindow.closed){pipWindow.focus();return}
-      try{pipWindow=await window.documentPictureInPicture.requestWindow({width:430,height:680});const d=pipWindow.document;d.documentElement.dataset.theme=state.theme;d.head.innerHTML=`<title>Textkit 미니창</title><style>${document.querySelector('style').textContent}body{background:var(--white)}.pip{padding:16px}.pip-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.pip textarea{height:300px}.pip .stats{padding-inline:2px}.pip .counts{width:100%}.pip .limit{width:100%}.pip-tools{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px}.pip-mode{font-size:12px;color:var(--g600)}.pip .primary-actions{grid-template-columns:1fr 1fr;margin-top:12px}.pip .action{width:100%;height:48px;font-size:13px}</style>`;d.body.innerHTML=`<main class="pip"><div class="pip-head"><div class="brand">textkit.</div><span class="eyebrow">미니창</span></div><textarea id="pipEditor" class="editor" placeholder="글자를 입력하거나 붙여넣어 주세요."></textarea><section class="stats"><div class="counts"><div class="count"><span class="count-label">공백 포함</span><strong class="count-value" id="pAll">0자</strong></div><div class="count"><span class="count-label">공백 제외</span><strong class="count-value" id="pNo">0자</strong></div></div><div class="limit" id="pLimit"><div class="limit-label" id="pRemain"></div><div class="track"><div class="bar" id="pBar"></div></div></div></section><div class="pip-tools"><button class="chip" id="pPrompt"># 프롬프트형식</button><span class="pip-mode" id="pMode">원문 기준</span></div><div class="primary-actions"><button class="action copy-btn" id="pCopy"><span>텍스트 복사</span></button><button class="action save-btn" id="pSave" aria-label="미니창 내용을 Markdown 파일로 저장"><span data-save-label>.MD 파일로 저장</span></button></div></main>`;const pe=d.querySelector('#pipEditor');pe.value=editor.value;pe.addEventListener('input',()=>{replaceEditorValue(pe.value)});d.querySelector('#pPrompt').addEventListener('click',()=>selectTool('prompt',$('[data-tool="prompt"]')));d.querySelector('#pCopy').addEventListener('click',()=>copyText(currentText(),d.querySelector('#pCopy')));d.querySelector('#pSave').addEventListener('click',()=>requestMdSave(d.querySelector('#pSave'),pipWindow));pipWindow.addEventListener('pagehide',()=>{pipWindow=null});syncPip()}catch(e){notify('미니창을 열 수 없습니다. 보안 연결 또는 권한을 확인해 주세요.')}
+      try{
+        pipWindow=await window.documentPictureInPicture.requestWindow({width:520,height:720});
+        const d=pipWindow.document;
+        const sharedStyles=[...document.styleSheets].map(sheet=>{try{return [...sheet.cssRules].map(rule=>rule.cssText).join('\n')}catch{return ''}}).join('\n');
+        d.documentElement.dataset.theme=state.theme;
+        d.head.innerHTML=`<title>Textkit 미니창</title><style>${sharedStyles}
+          body{background:var(--white);min-width:320px}.pip{padding:16px}.pip-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+          .pip-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--g200)}.pip-tab{height:42px;border:0;background:transparent;color:var(--g600);font-weight:700}.pip-tab.active{color:var(--black);box-shadow:inset 0 -2px var(--black)}.pip-panel[hidden]{display:none}
+          .pip textarea{height:280px}.pip .stats{padding-inline:2px}.pip .counts{width:100%}.pip .limit{width:100%}.pip-tools{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px}.pip-mode{font-size:12px;color:var(--g600)}.pip .primary-actions{grid-template-columns:1fr 1fr;margin-top:12px}.pip .action{width:100%;height:48px;font-size:13px}
+          .pip-doc-settings{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:10px}.pip-doc-settings .pip-file{grid-column:1/-1}.pip-doc-settings .field-label{font-size:11px}.pip-doc-settings input,.pip-doc-settings select{height:38px}.pip-doc-settings .doc-filename-row{gap:6px}.pip-doc-settings .doc-auto-name{height:38px;padding-inline:9px}
+          .pip .doc-editor-shell{border-radius:11px}.pip .doc-toolbar{position:static;padding:6px}.pip .doc-toolbar select{min-width:104px}.pip .doc-tool{width:32px;height:32px}.pip .doc-tool.wide{padding-inline:8px}.pip .doc-editor{min-height:300px;max-height:360px;overflow:auto;padding:18px;font-size:14px}.pip .doc-warning{margin-top:8px}.pip .doc-footer-row{margin-top:6px}.pip .doc-actions{grid-template-columns:1fr 1fr;margin-top:9px}.pip .doc-actions .doc-save{grid-column:1/-1}.pip .doc-save,.pip .doc-preview-toggle,.pip .md-copy{height:42px}.pip .md-copy{border-radius:11px}.pip .md-preview{margin-top:10px}.pip .md-source{max-height:220px;padding:13px}
+          @media(max-width:430px){.pip-doc-settings{grid-template-columns:1fr}.pip-doc-settings .pip-file{grid-column:auto}.pip .doc-actions{grid-template-columns:1fr}.pip .doc-actions .doc-save{grid-column:auto}}
+        </style>`;
+        d.body.innerHTML=`<main class="pip">
+          <div class="pip-head"><div class="brand">textkit.</div><span class="eyebrow">미니창</span></div>
+          <nav class="pip-tabs" role="tablist" aria-label="미니창 도구"><button class="pip-tab active" id="pTextTab" role="tab" aria-selected="true">공백 제거</button><button class="pip-tab" id="pDocTab" role="tab" aria-selected="false">.MD 파일로 저장</button></nav>
+          <section class="pip-panel" id="pTextPanel" role="tabpanel">
+            <textarea id="pipEditor" class="editor" placeholder="글자를 입력하거나 붙여넣어 주세요."></textarea>
+            <section class="stats"><div class="counts"><div class="count"><span class="count-label">공백 포함</span><strong class="count-value" id="pAll">0자</strong></div><div class="count"><span class="count-label">공백 제외</span><strong class="count-value" id="pNo">0자</strong></div></div><div class="limit" id="pLimit"><div class="limit-label" id="pRemain"></div><div class="track"><div class="bar" id="pBar"></div></div></div></section>
+            <div class="pip-tools"><button class="chip" id="pPrompt"># 프롬프트형식</button><span class="pip-mode" id="pMode">원문 기준</span></div>
+            <div class="primary-actions"><button class="action copy-btn" id="pCopy"><span>텍스트 복사</span></button><button class="action save-btn" id="pSave" aria-label="미니창 내용을 Markdown 파일로 저장"><span data-save-label>.MD 파일로 저장</span></button></div>
+          </section>
+          <section class="pip-panel" id="pDocPanel" role="tabpanel" hidden>
+            <div class="pip-doc-settings">
+              <label class="field"><span class="field-label">작품 이름</span><input id="pDocProject" placeholder="작품 이름"></label>
+              <label class="field"><span class="field-label">문서 종류</span><select id="pDocType"><option value="character">캐릭터 설정</option><option value="direction">방향성_줄거리</option><option value="prompt">캐릭터 프롬프트</option><option value="scene">첫장면</option><option value="detail">상세페이지</option><option value="custom">기타 (직접 입력)</option></select></label>
+              <label class="field doc-custom-type" id="pDocCustomWrap" hidden><span class="field-label">기타 문서 종류</span><input id="pDocCustomType" placeholder="문서 종류"></label>
+              <label class="field pip-file"><span class="field-label">저장 파일명</span><span class="doc-filename-row"><input id="pDocFileName"><button class="doc-auto-name" id="pDocAutoName" type="button">자동 이름</button></span></label>
+            </div>
+            <section class="doc-editor-shell" aria-label="미니창 서식 문서 편집기">
+              <div class="doc-toolbar" role="toolbar" aria-label="문서 서식 도구">
+                <select id="pDocBlockStyle" aria-label="문단 스타일"><option value="p">일반 텍스트</option><option value="h1">제목 1</option><option value="h2">제목 2</option><option value="h3">제목 3</option><option value="blockquote">인용문</option><option value="pre">코드블록</option></select>
+                <button class="doc-tool" type="button" data-pdoc-command="bold" aria-label="굵게">B</button><button class="doc-tool" type="button" data-pdoc-command="italic" aria-label="기울임"><em>I</em></button><button class="doc-tool" type="button" data-pdoc-command="strikeThrough" aria-label="취소선"><s>S</s></button>
+                <button class="doc-tool wide" type="button" data-pdoc-command="insertUnorderedList" aria-label="글머리 기호 목록">• 목록</button><button class="doc-tool wide" type="button" data-pdoc-command="insertOrderedList" aria-label="번호 목록">1. 목록</button>
+                <button class="doc-tool" type="button" data-pdoc-command="outdent" aria-label="내어쓰기">←</button><button class="doc-tool" type="button" data-pdoc-command="indent" aria-label="들여쓰기">→</button><button class="doc-tool" id="pDocLink" type="button" aria-label="링크 삽입">↗</button><button class="doc-tool" id="pDocHr" type="button" aria-label="구분선 삽입">―</button><button class="doc-tool wide" id="pDocTable" type="button" aria-label="표 삽입">표</button>
+              </div>
+              <div class="doc-editor" id="pDocEditor" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="true" data-placeholder="Google Docs 문서를 붙여넣으세요."></div>
+            </section>
+            <div class="doc-warning" id="pDocWarning" role="status"></div>
+            <div class="doc-footer-row"><button class="doc-clear" id="pDocClear" type="button">문서 지우기</button><span class="doc-privacy">본문은 자동 저장되지 않습니다.</span></div>
+            <div class="doc-actions"><button class="doc-preview-toggle" id="pDocPreview" type="button">Markdown 보기</button><button class="md-copy" id="pDocCopy" type="button">Markdown 복사</button><button class="doc-save" id="pDocSave" type="button">.MD 파일로 저장</button></div>
+            <section class="md-preview" id="pDocMarkdownPreview" hidden><pre class="md-source" id="pDocMarkdownSource" aria-label="변환된 Markdown 원문"></pre></section>
+          </section>
+        </main>`;
+        const setPipTab=target=>{const textActive=target==='text';d.querySelector('#pTextPanel').hidden=!textActive;d.querySelector('#pDocPanel').hidden=textActive;d.querySelector('#pTextTab').classList.toggle('active',textActive);d.querySelector('#pDocTab').classList.toggle('active',!textActive);d.querySelector('#pTextTab').setAttribute('aria-selected',String(textActive));d.querySelector('#pDocTab').setAttribute('aria-selected',String(!textActive))};
+        d.querySelector('#pTextTab').addEventListener('click',()=>setPipTab('text'));d.querySelector('#pDocTab').addEventListener('click',()=>setPipTab('doc'));
+        const pe=d.querySelector('#pipEditor');pe.value=editor.value;pe.addEventListener('input',()=>{replaceEditorValue(pe.value)});d.querySelector('#pPrompt').addEventListener('click',()=>selectTool('prompt',$('[data-tool="prompt"]')));d.querySelector('#pCopy').addEventListener('click',()=>copyText(currentText(),d.querySelector('#pCopy')));d.querySelector('#pSave').addEventListener('click',()=>requestMdSave(d.querySelector('#pSave'),pipWindow));
+        const controller=await ensureDocModule();controller?.attachPipWindow(pipWindow);
+        setPipTab(currentTab==='doc'?'doc':'text');
+        pipWindow.addEventListener('pagehide',()=>{pipWindow=null});syncPip();
+      }catch(e){console.error(e);notify('미니창을 열 수 없습니다. 보안 연결 또는 권한을 확인해 주세요.')}
     }
     editor.addEventListener('input',updateCounts);taskType.addEventListener('change',()=>{savePreferences();updateCounts()});
     $$('.chip').forEach(b=>b.addEventListener('click',()=>selectTool(b.dataset.tool,b)));['findText','replaceText'].forEach(id=>$(`#${id}`).addEventListener('input',()=>{if(activeTool==='replace')renderResult()}));
