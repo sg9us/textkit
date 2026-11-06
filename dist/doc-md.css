@@ -5,6 +5,7 @@
 :root[data-theme="dark"] .doc-editor a{color:#6ea8ff}
 :root[data-theme="dark"] .doc-save{color:var(--white)}
 :root[data-theme="dark"] .doc-warning{background:#3a2f16;color:#ffd58a}
+#docPanel>.doc-actions{margin-bottom:24px}
 .doc-editor-shell{background:var(--white)}
 .doc-indent-tool svg{width:19px;height:19px;display:block;margin:auto;fill:currentColor;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .doc-paper-wrap{padding:0}

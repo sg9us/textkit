@@ -49,7 +49,7 @@
     <nav class="tabs" role="tablist" aria-label="Textkit 도구">
       <button class="tab active" id="textTab" role="tab" aria-selected="true" aria-controls="textPanel">공백 제거</button>
       <button class="tab" id="webpTab" role="tab" aria-selected="false" aria-controls="webpPanel">Animated WebP</button>
-      <button class="tab" id="docTab" role="tab" aria-selected="false" aria-controls="docPanel">.MD 파일로 저장</button>
+      <button class="tab" id="docTab" role="tab" aria-selected="false" aria-controls="docPanel">.md 파일로 저장</button>
     </nav>
 
     <section class="tab-panel" id="textPanel" role="tabpanel" aria-labelledby="textTab">
@@ -67,26 +67,28 @@
     </section>
 
     <section class="result" id="resultBox" hidden><div class="result-head"><div class="result-title-wrap"><span class="success-dot" aria-hidden="true">✓</span><h2>정리 결과</h2></div><span class="result-meta" id="resultMeta">0자 · 변동 없음</span></div><div class="result-text" id="resultText" tabindex="0"></div><div class="result-actions"><button class="apply-btn" id="applyBtn">원문에 적용</button></div></section>
-    <div class="text-actions"><button class="action cleanup-btn" id="cleanupBtn"><span>공백 제거</span></button><button class="action text-secondary-action copy-btn" id="copyBtn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg><span>텍스트 복사</span></button><button class="action text-secondary-action save-btn" id="saveBtn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"/></svg><span data-save-label>.MD 파일로 저장</span></button></div>
+    <div class="text-actions"><button class="action cleanup-btn" id="cleanupBtn"><span>공백 제거</span></button><button class="action text-secondary-action copy-btn" id="copyBtn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg><span>텍스트 복사</span></button><button class="action text-secondary-action save-btn" id="saveBtn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"/></svg><span data-save-label>.md 파일로 저장</span></button></div>
     </section>
 
     <section class="tab-panel" id="webpPanel" role="tabpanel" aria-labelledby="webpTab" hidden>
-      <div class="webp-intro"><h1>Animated WebP Maker</h1><p>이미지를 원하는 순서와 속도로 편집해 브라우저 안에서 Animated WebP를 만드세요.</p></div>
+      <div class="webp-intro"><h1>Animated WebP Maker</h1><p>이미지를 원하는 순서와 속도로 편집해, Animated WebP를 만드세요.</p></div>
       <section class="upload-zone" id="dropZone" role="button" tabindex="0" aria-label="이미지를 클릭하여 선택하거나 이 영역에 드래그하여 추가">
         <div id="uploadCopy"><div><div class="upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="m6.5 16 4-4 3 3 2-2 2.5 3"/><path d="M16.5 7.5v5m-2.5-2.5h5"/></svg></div><div class="upload-title">이미지를 놓거나 선택해 주세요</div><div class="upload-note">PNG, JPG/JPEG, 정적 WebP · 여러 파일 선택 가능</div></div></div>
         <input class="sr-only" id="frameFiles" type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" multiple>
       </section>
 
       <div class="webp-workspace" id="webpWorkspace" hidden>
-        <div class="webp-quickbar"><span class="webp-summary" id="frameSummary">0개 프레임</span><div class="webp-quickbar-actions"><button class="secondary-small" id="sortFrames" type="button">파일명순 정렬</button><button class="secondary-small danger-small" id="deleteAllFrames" type="button">이미지 전체 삭제</button></div></div>
+        <div class="webp-quickbar">
+          <div class="delay-controls">
+            <label class="field"><span class="field-label">기본 DELAY (ms)</span><input id="defaultDelay" inputmode="numeric" value="1200"><span class="field-error" id="defaultDelayError"></span></label>
+            <button class="apply-delay" id="applyAllDelay" type="button">전체 적용</button>
+            <label class="field"><span class="field-label">마지막 DELAY (ms)</span><input id="lastDelay" inputmode="numeric" value="900"><span class="field-error" id="lastDelayError"></span></label>
+            <button class="apply-delay" id="applyLastDelay" type="button">마지막에 적용</button>
+          </div>
+          <div class="webp-quickbar-actions"><button class="secondary-small" id="sortFrames" type="button">파일명순 정렬</button><button class="secondary-small danger-small" id="deleteAllFrames" type="button">이미지 전체 삭제</button></div>
+        </div>
         <div class="webp-grid">
-          <section class="webp-card"><h2 class="webp-card-title">프레임 및 DELAY</h2>
-            <div class="delay-controls">
-              <label class="field"><span class="field-label">기본 DELAY (ms)</span><input id="defaultDelay" inputmode="numeric" value="1200"><span class="field-error" id="defaultDelayError"></span></label>
-              <button class="apply-delay" id="applyAllDelay" type="button">전체 적용</button>
-              <label class="field"><span class="field-label">마지막 DELAY (ms)</span><input id="lastDelay" inputmode="numeric" value="900"><span class="field-error" id="lastDelayError"></span></label>
-              <button class="apply-delay" id="applyLastDelay" type="button">마지막에 적용</button>
-            </div>
+          <section class="webp-card"><div class="webp-card-head"><h2 class="webp-card-title">프레임 및 DELAY</h2><span class="webp-summary" id="frameSummary">0개 프레임</span></div>
             <div class="frame-list" id="frameList" aria-live="polite"></div>
           </section>
 
@@ -123,13 +125,13 @@
     </section>
 
     <section class="tab-panel doc-panel" id="docPanel" role="tabpanel" aria-labelledby="docTab" hidden>
-      <div class="doc-intro"><h1>.MD 파일로 저장</h1><p>복사한 텍스트를 마크다운 서식 그대로 확인하고, Markdown으로 저장하세요.</p></div>
+      <div class="doc-intro"><h1>.md 파일로 저장</h1><p>복사한 텍스트를 마크다운 서식 그대로 확인하고, Markdown으로 저장하세요.</p></div>
 
-      <div class="doc-actions"><button class="doc-preview-toggle" id="docPreviewToggle" type="button">Markdown 원문 보기</button><button class="doc-save" id="docSave" type="button">.MD 파일로 저장</button></div>
+      <div class="doc-actions"><button class="doc-preview-toggle" id="docPreviewToggle" type="button">Markdown 원문 보기</button><button class="doc-save" id="docSave" type="button">.md 파일로 저장</button></div>
 
       <section class="doc-file-settings" aria-label="파일명 설정">
         <label class="field"><span class="field-label">작품 이름</span><input id="docProjectName" placeholder="작품 이름을 입력하세요" autocomplete="off"></label>
-        <label class="field"><span class="field-label">문서 종류</span><select id="docType"><option value="character">캐릭터 설정</option><option value="direction">방향성_줄거리</option><option value="prompt">캐릭터 프롬프트</option><option value="scene">첫장면</option><option value="detail">상세페이지</option><option value="custom">기타 (직접 입력)</option></select></label>
+        <label class="field"><span class="field-label">문서 종류</span><select id="docType"><option value="character">캐릭터 설정</option><option value="direction">방향성_줄거리</option><option value="prompt">캐릭터 프롬프트</option><option value="scene">첫장면</option><option value="detail">상세페이지 html</option><option value="custom">기타 (직접 입력)</option></select></label>
         <label class="field doc-custom-type" id="docCustomTypeWrap" hidden><span class="field-label">기타 문서 종류</span><input id="docCustomType" placeholder="문서 종류를 입력하세요" autocomplete="off"></label>
         <label class="field"><span class="field-label">저장 파일명</span><span class="doc-filename-row"><input id="docFileName" autocomplete="off"><button class="doc-auto-name" id="docAutoName" type="button">자동 이름 사용</button></span><span class="doc-name-hint">직접 수정한 파일명은 작품명이나 문서 종류를 바꿔도 덮어쓰지 않습니다.</span></label>
       </section>
@@ -163,9 +165,9 @@
     <footer class="footer"><span>© 2026 sg9us</span></footer>
   </main>
 
-  <dialog id="saveDialog"><form class="modal" id="saveForm"><div class="modal-head"><h2>.MD 파일로 저장</h2><button class="close" type="button" data-close="saveDialog" aria-label="닫기">×</button></div><label class="form-group"><span class="form-label">파일명</span><span class="file-row"><input class="text-input" id="fileName" required autocomplete="off"><span class="suffix">.md</span></span></label><p class="privacy-note">이 브라우저에서는 시스템 저장 창을 지원하지 않습니다. 파일은 브라우저의 다운로드 설정에 따라 저장되며, 설정에 따라 위치 선택 창이 표시될 수 있습니다.</p><div class="modal-actions"><button class="modal-btn" type="button" data-close="saveDialog">취소</button><button class="modal-btn primary" type="submit">다운로드</button></div></form></dialog>
+  <dialog id="saveDialog"><form class="modal" id="saveForm"><div class="modal-head"><h2>.md 파일로 저장</h2><button class="close" type="button" data-close="saveDialog" aria-label="닫기">×</button></div><label class="form-group"><span class="form-label">파일명</span><span class="file-row"><input class="text-input" id="fileName" required autocomplete="off"><span class="suffix">.md</span></span></label><p class="privacy-note">이 브라우저에서는 시스템 저장 창을 지원하지 않습니다. 파일은 브라우저의 다운로드 설정에 따라 저장되며, 설정에 따라 위치 선택 창이 표시될 수 있습니다.</p><div class="modal-actions"><button class="modal-btn" type="button" data-close="saveDialog">취소</button><button class="modal-btn primary" type="submit">다운로드</button></div></form></dialog>
   <dialog id="settingsDialog"><div class="modal"><div class="modal-head"><h2>설정</h2><button class="close" type="button" data-close="settingsDialog" aria-label="닫기">×</button></div><div class="switch-row"><div><div class="form-label">자동 임시 저장</div><div style="font-size:12px;color:var(--g600);margin-top:4px">공백 제거 탭의 입력 내용을 이 브라우저에 저장하고, 다시 열 때 복원합니다.</div></div><label class="switch"><input id="autosave" type="checkbox" aria-label="자동 임시 저장"><span class="slider"></span></label></div><div class="switch-row"><div><div class="form-label">다크 모드</div><div style="font-size:12px;color:var(--g600);margin-top:4px">모든 도구와 미니창에 적용합니다.</div></div><label class="switch"><input id="themeToggle" type="checkbox" aria-label="다크 모드"><span class="slider"></span></label></div><p class="privacy-note">자동 임시 저장과 테마 설정은 현재 브라우저에만 보관됩니다. 입력한 텍스트는 외부 서버로 전송되지 않습니다.</p><div class="modal-actions"><button class="modal-btn danger" id="clearSaved" type="button">저장된 입력 삭제</button><button class="modal-btn primary" type="button" data-close="settingsDialog">완료</button></div></div></dialog>
-  <dialog id="docSaveDialog"><form class="modal" id="docSaveForm"><div class="modal-head"><h2>.MD 파일로 저장</h2><button class="close" type="button" data-close="docSaveDialog" aria-label="닫기">×</button></div><label class="form-group"><span class="form-label">파일명</span><span class="file-row"><input class="text-input" id="docFallbackName" required autocomplete="off"><span class="suffix">.md</span></span></label><p class="privacy-note">이 브라우저에서는 시스템 저장 창을 지원하지 않습니다. 파일은 브라우저 다운로드 설정에 따라 저장되며, 설정에 따라 저장 위치 선택 창이 표시될 수 있습니다.</p><div class="modal-actions"><button class="modal-btn" type="button" data-close="docSaveDialog">취소</button><button class="modal-btn primary" type="submit">다운로드</button></div></form></dialog>
+  <dialog id="docSaveDialog"><form class="modal" id="docSaveForm"><div class="modal-head"><h2>.md 파일로 저장</h2><button class="close" type="button" data-close="docSaveDialog" aria-label="닫기">×</button></div><label class="form-group"><span class="form-label">파일명</span><span class="file-row"><input class="text-input" id="docFallbackName" required autocomplete="off"><span class="suffix">.md</span></span></label><p class="privacy-note">이 브라우저에서는 시스템 저장 창을 지원하지 않습니다. 파일은 브라우저 다운로드 설정에 따라 저장되며, 설정에 따라 저장 위치 선택 창이 표시될 수 있습니다.</p><div class="modal-actions"><button class="modal-btn" type="button" data-close="docSaveDialog">취소</button><button class="modal-btn primary" type="submit">다운로드</button></div></form></dialog>
   <div class="toast" id="toast" role="status"></div>
 
   <script src="./js/config.js"></script>
@@ -207,20 +209,20 @@
     async function ensureDocModule(){
       if(docLoaded)return docController;
       try{const module=await import('./js/doc-md.js');docController=module.initDocumentMd({notify});docLoaded=true;return docController}
-      catch(error){notify('.MD 파일 저장 모듈을 불러오지 못했습니다. localhost로 실행해 주세요.');console.error(error);return null}
+      catch(error){notify('.md 파일 저장 모듈을 불러오지 못했습니다. localhost로 실행해 주세요.');console.error(error);return null}
     }
     async function switchTab(target){
       currentTab=target;
       const tabs={text:['#textTab','#textPanel'],webp:['#webpTab','#webpPanel'],doc:['#docTab','#docPanel']};
       Object.entries(tabs).forEach(([name,[tab,panel]])=>{const active=name===target;$(panel).hidden=!active;$(tab).classList.toggle('active',active);$(tab).setAttribute('aria-selected',String(active))});
-      $('#pipBtn').disabled=target==='webp'||!pipSupported;$('#pipBtn').title=target==='webp'?'미니창은 공백 제거와 .MD 파일 저장 탭에서 사용할 수 있습니다.':pipSupported?'미니창 열기':'이 브라우저에서는 Document PiP를 지원하지 않습니다.';
+      $('#pipBtn').disabled=target==='webp'||!pipSupported;$('#pipBtn').title=target==='webp'?'미니창은 공백 제거와 .md 파일 저장 탭에서 사용할 수 있습니다.':pipSupported?'미니창 열기':'이 브라우저에서는 Document PiP를 지원하지 않습니다.';
       if(target==='webp'&&!webpLoaded){try{const module=await import('./js/webp-maker.js');module.initWebPMaker({notify});webpLoaded=true}catch(error){notify('Animated WebP 모듈을 불러오지 못했습니다. localhost로 실행해 주세요.');console.error(error)}}
       if(target==='doc')await ensureDocModule();
     }
     async function copyText(text,button=$('#copyBtn')){try{await navigator.clipboard.writeText(text)}catch{const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.append(ta);ta.select();document.execCommand('copy');ta.remove()}button.classList.add('success');const span=button.querySelector('span');if(span)span.textContent='복사 완료';setTimeout(()=>{button.classList.remove('success');if(span)span.textContent='텍스트 복사'},1600)}
     function safeMdName(name){const base=name.trim().replace(/(?:\.md)+$/i,'').replace(/[\\/:*?"<>|]+/g,'').slice(0,80)||'캐릭터_프롬프트';return `${base}.md`}
     function downloadMd(name,text){const blob=new Blob([text],{type:'text/markdown;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=safeMdName(name);a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
-    function setSaveFeedback(button){if(!button)return;const label=button.querySelector('[data-save-label]');if(!label)return;label.textContent='저장 완료';button.style.color='var(--green)';setTimeout(()=>{label.textContent='.MD 파일로 저장';button.style.color=''},1500)}
+    function setSaveFeedback(button){if(!button)return;const label=button.querySelector('[data-save-label]');if(!label)return;label.textContent='저장 완료';button.style.color='var(--green)';setTimeout(()=>{label.textContent='.md 파일로 저장';button.style.color=''},1500)}
     async function requestMdSave(button=$('#saveBtn'),pickerWindow=window){
       const pickerHost=typeof pickerWindow.showSaveFilePicker==='function'?pickerWindow:window;
       if(typeof pickerHost.showSaveFilePicker!=='function'){$('#fileName').value=DEFAULT_MD_NAME.replace(/\.md$/i,'');$('#saveDialog').showModal();window.focus();return}
@@ -247,18 +249,18 @@
         </style>`;
         d.body.innerHTML=`<main class="pip">
           <div class="pip-head"><div class="brand">textkit.</div><span class="eyebrow">미니창</span></div>
-          <nav class="pip-tabs" role="tablist" aria-label="미니창 도구"><button class="pip-tab active" id="pTextTab" role="tab" aria-selected="true">공백 제거</button><button class="pip-tab" id="pDocTab" role="tab" aria-selected="false">.MD 파일로 저장</button></nav>
+          <nav class="pip-tabs" role="tablist" aria-label="미니창 도구"><button class="pip-tab active" id="pTextTab" role="tab" aria-selected="true">공백 제거</button><button class="pip-tab" id="pDocTab" role="tab" aria-selected="false">.md 파일로 저장</button></nav>
           <section class="pip-panel" id="pTextPanel" role="tabpanel">
             <textarea id="pipEditor" class="editor" placeholder="글자를 입력하거나 붙여넣어 주세요."></textarea>
             <section class="stats"><div class="counts"><div class="count"><span class="count-label">공백 포함</span><strong class="count-value" id="pAll">0자</strong></div><div class="count"><span class="count-label">공백 제외</span><strong class="count-value" id="pNo">0자</strong></div></div><div class="limit" id="pLimit"><div class="limit-label" id="pRemain"></div><div class="track"><div class="bar" id="pBar"></div></div></div></section>
             <div class="pip-type-head"><span class="eyebrow">공백 정리 유형</span><span class="pip-mode" id="pMode">실행 전 · 원문 기준</span></div>
             <div class="pip-type-grid" role="radiogroup" aria-label="미니창 공백 정리 유형"><button class="chip active" data-pip-tool="prompt" role="radio" aria-checked="true"># 프롬프트형식</button><button class="chip" data-pip-tool="spaces" role="radio" aria-checked="false">#띄어쓰기제거</button><button class="chip" data-pip-tool="blankLines" role="radio" aria-checked="false">빈 줄 제거</button></div>
-            <div class="text-actions"><button class="action cleanup-btn" id="pCleanup"><span>공백 제거</span></button><button class="action text-secondary-action copy-btn" id="pCopy"><span>텍스트 복사</span></button><button class="action text-secondary-action save-btn" id="pSave" aria-label="미니창 내용을 Markdown 파일로 저장"><span data-save-label>.MD 파일로 저장</span></button></div>
+            <div class="text-actions"><button class="action cleanup-btn" id="pCleanup"><span>공백 제거</span></button><button class="action text-secondary-action copy-btn" id="pCopy"><span>텍스트 복사</span></button><button class="action text-secondary-action save-btn" id="pSave" aria-label="미니창 내용을 Markdown 파일로 저장"><span data-save-label>.md 파일로 저장</span></button></div>
           </section>
           <section class="pip-panel" id="pDocPanel" role="tabpanel" hidden>
             <div class="pip-doc-settings">
               <label class="field"><span class="field-label">작품 이름</span><input id="pDocProject" placeholder="작품 이름"></label>
-              <label class="field"><span class="field-label">문서 종류</span><select id="pDocType"><option value="character">캐릭터 설정</option><option value="direction">방향성_줄거리</option><option value="prompt">캐릭터 프롬프트</option><option value="scene">첫장면</option><option value="detail">상세페이지</option><option value="custom">기타 (직접 입력)</option></select></label>
+              <label class="field"><span class="field-label">문서 종류</span><select id="pDocType"><option value="character">캐릭터 설정</option><option value="direction">방향성_줄거리</option><option value="prompt">캐릭터 프롬프트</option><option value="scene">첫장면</option><option value="detail">상세페이지 html</option><option value="custom">기타 (직접 입력)</option></select></label>
               <label class="field doc-custom-type" id="pDocCustomWrap" hidden><span class="field-label">기타 문서 종류</span><input id="pDocCustomType" placeholder="문서 종류"></label>
               <label class="field pip-file"><span class="field-label">저장 파일명</span><span class="doc-filename-row"><input id="pDocFileName"><button class="doc-auto-name" id="pDocAutoName" type="button">자동 이름</button></span></label>
             </div>
@@ -273,7 +275,7 @@
             </section>
             <div class="doc-warning" id="pDocWarning" role="status"></div>
             <div class="doc-footer-row"><button class="doc-clear" id="pDocClear" type="button">문서 지우기</button><span class="doc-privacy">본문은 자동 저장되지 않습니다.</span></div>
-            <div class="doc-actions"><button class="doc-preview-toggle" id="pDocPreview" type="button">Markdown 보기</button><button class="md-copy" id="pDocCopy" type="button">Markdown 복사</button><button class="doc-save" id="pDocSave" type="button">.MD 파일로 저장</button></div>
+            <div class="doc-actions"><button class="doc-preview-toggle" id="pDocPreview" type="button">Markdown 보기</button><button class="md-copy" id="pDocCopy" type="button">Markdown 복사</button><button class="doc-save" id="pDocSave" type="button">.md 파일로 저장</button></div>
             <section class="md-preview" id="pDocMarkdownPreview" hidden><pre class="md-source" id="pDocMarkdownSource" aria-label="변환된 Markdown 원문"></pre></section>
           </section>
         </main>`;

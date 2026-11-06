@@ -20,7 +20,7 @@ export function initDocumentMd({ notify = () => {} } = {}) {
 
   const TYPE_LABELS = {
     character: '캐릭터 설정', direction: '방향성_줄거리', prompt: '캐릭터 프롬프트',
-    scene: '첫장면', detail: '상세페이지', custom: '기타'
+    scene: '첫장면', detail: '상세페이지 html', custom: '기타'
   };
 
   function escapeHTML(value) {
