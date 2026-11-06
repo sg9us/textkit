@@ -20,9 +20,9 @@ export function initWebPMaker({ notify = () => {} } = {}) {
   };
 
   const els = {
-    dropZone: $('#dropZone'), fileInput: $('#frameFiles'), pickButton: $('#pickFrames'),
+    dropZone: $('#dropZone'), fileInput: $('#frameFiles'),
     uploadCopy: $('#uploadCopy'), workspace: $('#webpWorkspace'), frameList: $('#frameList'),
-    frameSummary: $('#frameSummary'), sortButton: $('#sortFrames'), defaultDelay: $('#defaultDelay'),
+    frameSummary: $('#frameSummary'), sortButton: $('#sortFrames'), deleteAllButton: $('#deleteAllFrames'), defaultDelay: $('#defaultDelay'),
     lastDelay: $('#lastDelay'), defaultDelayError: $('#defaultDelayError'), lastDelayError: $('#lastDelayError'),
     applyAll: $('#applyAllDelay'), applyLast: $('#applyLastDelay'), previewCanvas: $('#previewCanvas'),
     playButton: $('#previewPlay'), restartButton: $('#previewRestart'), previewStatus: $('#previewStatus'),
@@ -34,6 +34,8 @@ export function initWebPMaker({ notify = () => {} } = {}) {
     encodeStatus: $('#encodeStatus'), result: $('#webpResult'), resultImage: $('#webpResultImage'),
     resultMeta: $('#webpResultMeta'), resultDownload: $('#webpResultDownload')
   };
+
+  const uploadIcon = '<div class="upload-icon compact-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="m6.5 16 4-4 3 3 2-2 2.5 3"/><path d="M16.5 7.5v5m-2.5-2.5h5"/></svg></div>';
 
   function escapeHTML(value) {
     return value.replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]);
@@ -137,10 +139,10 @@ export function initWebPMaker({ notify = () => {} } = {}) {
     const hasFrames = state.frames.length > 0;
     els.workspace.hidden = !hasFrames;
     els.dropZone.classList.toggle('compact', hasFrames);
+    els.dropZone.setAttribute('aria-label', hasFrames ? '이미지 추가. 클릭하여 선택하거나 이 영역에 드래그하여 추가' : '이미지를 클릭하여 선택하거나 이 영역에 드래그하여 추가');
     els.uploadCopy.innerHTML = hasFrames
-      ? `<div class="upload-compact-copy"><div class="upload-icon compact-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="m6.5 16 4-4 3 3 2-2 2.5 3"/><path d="M16.5 7.5v5m-2.5-2.5h5"/></svg></div><div><div class="upload-title">이미지 추가</div><div class="upload-note">PNG, JPG, 정적 WebP · 현재 ${state.frames.length}개</div></div></div>`
-      : `<div><div class="upload-icon" aria-hidden="true">＋</div><div class="upload-title">이미지를 놓거나 선택해 주세요</div><div class="upload-note">PNG, JPG/JPEG, 정적 WebP · 여러 파일 선택 가능</div></div>`;
-    els.pickButton.textContent = hasFrames ? '이미지 추가' : '파일 선택';
+      ? `<div class="upload-compact-copy">${uploadIcon}<div><div class="upload-title">이미지 추가</div><div class="upload-note">PNG, JPG, 정적 WebP · 현재 ${state.frames.length}개</div></div></div>`
+      : `<div>${uploadIcon}<div class="upload-title">이미지를 놓거나 선택해 주세요</div><div class="upload-note">PNG, JPG/JPEG, 정적 WebP · 여러 파일 선택 가능</div></div>`;
     if (!hasFrames) return;
     renderFrames();
     updateSummary();
@@ -240,6 +242,29 @@ export function initWebPMaker({ notify = () => {} } = {}) {
     syncAutoSize();
     renderAll();
     restartPreviewTimer();
+  }
+
+  function deleteAllFrames() {
+    if (!state.frames.length || !window.confirm(`업로드한 이미지 ${state.frames.length}개를 모두 삭제할까요?`)) return;
+    clearTimeout(state.previewTimer);
+    state.frames.forEach((frame, index, frames) => {
+      if (frames.findIndex((item) => item.objectUrl === frame.objectUrl) === index) {
+        URL.revokeObjectURL(frame.objectUrl);
+        frame.bitmap.close?.();
+      }
+    });
+    state.frames = [];
+    state.currentFrame = 0;
+    state.playing = true;
+    state.draggingId = null;
+    els.fileInput.value = '';
+    if (state.resultUrl) URL.revokeObjectURL(state.resultUrl);
+    state.resultUrl = null;
+    els.result.hidden = true;
+    els.progressBar.style.width = '0%';
+    setEncodeStatus('');
+    renderAll();
+    notify('업로드한 이미지를 모두 삭제했습니다.');
   }
 
   function applyCommonDelay(input, errorElement, target) {
@@ -456,12 +481,16 @@ export function initWebPMaker({ notify = () => {} } = {}) {
     }
   }
 
-  els.pickButton.addEventListener('click', () => els.fileInput.click());
+  els.dropZone.addEventListener('click', (event) => { if (event.target !== els.fileInput) els.fileInput.click(); });
+  els.dropZone.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); els.fileInput.click(); }
+  });
   els.fileInput.addEventListener('change', (event) => addFiles(event.target.files));
   ['dragenter', 'dragover'].forEach((type) => els.dropZone.addEventListener(type, (event) => { event.preventDefault(); els.dropZone.classList.add('dragover'); }));
   ['dragleave', 'drop'].forEach((type) => els.dropZone.addEventListener(type, (event) => { event.preventDefault(); els.dropZone.classList.remove('dragover'); }));
   els.dropZone.addEventListener('drop', (event) => addFiles(event.dataTransfer.files));
   els.sortButton.addEventListener('click', () => { state.frames.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })); state.currentFrame = 0; renderAll(); restartPreviewTimer(); });
+  els.deleteAllButton.addEventListener('click', deleteAllFrames);
   els.applyAll.addEventListener('click', () => applyCommonDelay(els.defaultDelay, els.defaultDelayError, 'all'));
   els.applyLast.addEventListener('click', () => applyCommonDelay(els.lastDelay, els.lastDelayError, 'last'));
   els.playButton.addEventListener('click', () => { state.playing = !state.playing; restartPreviewTimer(); });

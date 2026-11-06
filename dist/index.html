@@ -67,14 +67,13 @@
 
     <section class="tab-panel" id="webpPanel" role="tabpanel" aria-labelledby="webpTab" hidden>
       <div class="webp-intro"><h1>Animated WebP Maker</h1><p>이미지를 원하는 순서와 속도로 편집해 브라우저 안에서 Animated WebP를 만드세요.</p></div>
-      <section class="upload-zone" id="dropZone" aria-label="이미지 업로드 영역">
-        <div id="uploadCopy"><div><div class="upload-icon" aria-hidden="true">＋</div><div class="upload-title">이미지를 놓거나 선택해 주세요</div><div class="upload-note">PNG, JPG/JPEG, 정적 WebP · 여러 파일 선택 가능</div></div></div>
+      <section class="upload-zone" id="dropZone" role="button" tabindex="0" aria-label="이미지를 클릭하여 선택하거나 이 영역에 드래그하여 추가">
+        <div id="uploadCopy"><div><div class="upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="m6.5 16 4-4 3 3 2-2 2.5 3"/><path d="M16.5 7.5v5m-2.5-2.5h5"/></svg></div><div class="upload-title">이미지를 놓거나 선택해 주세요</div><div class="upload-note">PNG, JPG/JPEG, 정적 WebP · 여러 파일 선택 가능</div></div></div>
         <input class="sr-only" id="frameFiles" type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" multiple>
-        <button class="secondary-small" id="pickFrames" type="button">파일 선택</button>
       </section>
 
       <div class="webp-workspace" id="webpWorkspace" hidden>
-        <div class="webp-quickbar"><span class="webp-summary" id="frameSummary">0개 프레임</span><button class="secondary-small" id="sortFrames" type="button">파일명순 정렬</button></div>
+        <div class="webp-quickbar"><span class="webp-summary" id="frameSummary">0개 프레임</span><div class="webp-quickbar-actions"><button class="secondary-small" id="sortFrames" type="button">파일명순 정렬</button><button class="secondary-small danger-small" id="deleteAllFrames" type="button">이미지 전체 삭제</button></div></div>
         <div class="webp-grid">
           <section class="webp-card"><h2 class="webp-card-title">프레임 및 DELAY</h2>
             <div class="delay-controls">
