@@ -71,6 +71,12 @@ export function initDocumentMd({ notify = () => {} } = {}) {
     element.append(wrapper);
   }
 
+  function unwrapElement(element) {
+    const fragment = element.ownerDocument.createDocumentFragment();
+    while (element.firstChild) fragment.append(element.firstChild);
+    element.replaceWith(fragment);
+  }
+
   function sanitizeGoogleDocsHTML(html) {
     const parser = new DOMParser();
     const documentCopy = parser.parseFromString(html, 'text/html');
@@ -78,6 +84,23 @@ export function initDocumentMd({ notify = () => {} } = {}) {
     documentCopy.querySelectorAll(forbidden).forEach((element) => element.remove());
     const allowed = new Set(['H1','H2','H3','H4','H5','H6','P','BR','STRONG','B','EM','I','S','DEL','UL','OL','LI','BLOCKQUOTE','HR','A','TABLE','THEAD','TBODY','TFOOT','TR','TH','TD','CODE','PRE','DIV','SPAN']);
     const documentTextLength = documentCopy.body.textContent.replace(/\s/g, '').length;
+
+    if (documentTextLength >= 40) {
+      [...documentCopy.body.querySelectorAll('b,strong,[style]')].forEach((element) => {
+        if (!element.isConnected) return;
+        const weight = element.style.fontWeight;
+        const hasBoldStyle = weight === 'bold' || Number.parseInt(weight, 10) >= 600;
+        const isBoldTag = element.tagName === 'B' || element.tagName === 'STRONG';
+        if (!hasBoldStyle && !isBoldTag) return;
+        const textLength = element.textContent.replace(/\s/g, '').length;
+        if (textLength / documentTextLength < 0.8) return;
+        if (isBoldTag) {
+          const wrapsDocumentStructure = Boolean(element.querySelector('p,div,h1,h2,h3,h4,h5,h6,ul,ol,blockquote,table,pre'));
+          if (wrapsDocumentStructure) unwrapElement(element);
+        } else element.style.removeProperty('font-weight');
+      });
+    }
+
     const styledBoldTextNodes = new Set();
     documentCopy.body.querySelectorAll('span[style]').forEach((element) => {
       const weight = element.style.fontWeight;
@@ -390,7 +413,14 @@ export function initDocumentMd({ notify = () => {} } = {}) {
   $('#docLink').addEventListener('click', insertLink);
   $('#docHr').addEventListener('click', () => exec('insertHorizontalRule'));
   $('#docTable').addEventListener('click', insertTable);
-  els.previewToggle.addEventListener('click', () => { const open = els.preview.hidden; els.preview.hidden = !open; els.previewToggle.textContent = open ? 'Markdown 원문 닫기' : 'Markdown 원문 보기'; if (open) els.source.textContent = currentMarkdown(); });
+  els.previewToggle.addEventListener('click', () => {
+    const open = els.preview.hidden;
+    els.preview.hidden = !open;
+    els.previewToggle.textContent = open ? 'Markdown 원문 닫기' : 'Markdown 원문 보기';
+    if (!open) return;
+    els.source.textContent = currentMarkdown();
+    requestAnimationFrame(() => requestAnimationFrame(() => els.preview.scrollIntoView({ behavior: 'smooth', block: 'start' })));
+  });
   els.copy.addEventListener('click', async () => { const markdown = currentMarkdown(); try { await navigator.clipboard.writeText(markdown); } catch { const area = document.createElement('textarea'); area.value = markdown; document.body.append(area); area.select(); document.execCommand('copy'); area.remove(); } notify('Markdown 원문을 복사했습니다.'); });
   els.clear.addEventListener('click', () => { if (!els.editor.textContent.trim() || window.confirm('편집 중인 문서를 모두 지울까요? 이 작업은 되돌릴 수 없습니다.')) { els.editor.innerHTML = ''; refreshPreview(); syncPipFromMain(); els.warning.classList.remove('show'); } });
   els.save.addEventListener('click', () => saveMarkdown());

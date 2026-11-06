@@ -151,8 +151,9 @@ export function initWebPMaker({ notify = () => {} } = {}) {
   }
 
   function renderFrames() {
-    els.frameList.innerHTML = state.frames.map((frame, index) => `
-      <article class="frame-card" draggable="true" data-id="${frame.id}">
+    els.frameList.innerHTML = `${state.frames.map((frame, index) => `
+      <div class="frame-drop-zone" data-insert-index="${index}" aria-hidden="true"></div>
+      <article class="frame-card" draggable="true" data-id="${frame.id}" data-frame-index="${index}">
         <span class="drag-handle" title="드래그하여 순서 변경" aria-hidden="true">⠿</span>
         <span class="frame-number">${index + 1}</span>
         <img class="frame-thumb" src="${frame.objectUrl}" alt="${escapeHTML(frame.name)} 미리보기">
@@ -163,14 +164,28 @@ export function initWebPMaker({ notify = () => {} } = {}) {
         </div>
         <label class="delay-field"><span class="sr-only">${index + 1}번 프레임 DELAY</span><input inputmode="numeric" value="${frame.draftDelay}" data-delay aria-label="${index + 1}번 프레임 DELAY (ms)" class="${frame.error ? 'invalid' : ''}"><small>${escapeHTML(frame.error)}</small></label>
         <div class="frame-actions"><button class="frame-icon-btn" type="button" data-duplicate aria-label="${index + 1}번 프레임 복제" title="복제"><svg class="frame-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="10" height="10" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></button><button class="frame-icon-btn danger" type="button" data-delete aria-label="${index + 1}번 프레임 삭제" title="삭제">×</button></div>
-      </article>`).join('');
+      </article>`).join('')}<div class="frame-drop-zone" data-insert-index="${state.frames.length}" aria-hidden="true"></div>`;
+
+    const clearDropZones = () => els.frameList.querySelectorAll('.frame-drop-zone.active').forEach((zone) => zone.classList.remove('active'));
+    const activateDropZone = (insertionIndex) => {
+      clearDropZones();
+      els.frameList.querySelector(`.frame-drop-zone[data-insert-index="${insertionIndex}"]`)?.classList.add('active');
+    };
+
+    els.frameList.querySelectorAll('.frame-drop-zone').forEach((zone) => {
+      const insertionIndex = Number(zone.dataset.insertIndex);
+      zone.addEventListener('dragenter', (event) => { event.preventDefault(); activateDropZone(insertionIndex); });
+      zone.addEventListener('dragover', (event) => { event.preventDefault(); if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'; activateDropZone(insertionIndex); });
+      zone.addEventListener('drop', (event) => { event.preventDefault(); clearDropZones(); reorderAtInsertionIndex(state.draggingId, insertionIndex); });
+    });
 
     els.frameList.querySelectorAll('.frame-card').forEach((card) => {
       const frame = state.frames.find((item) => item.id === card.dataset.id);
-      card.addEventListener('dragstart', () => { state.draggingId = frame.id; card.classList.add('dragging'); });
-      card.addEventListener('dragend', () => { state.draggingId = null; card.classList.remove('dragging'); });
-      card.addEventListener('dragover', (event) => { event.preventDefault(); });
-      card.addEventListener('drop', (event) => { event.preventDefault(); reorderById(state.draggingId, frame.id); });
+      const insertionIndexAtPointer = (event) => Number(card.dataset.frameIndex) + (event.clientY >= card.getBoundingClientRect().top + card.offsetHeight / 2 ? 1 : 0);
+      card.addEventListener('dragstart', (event) => { state.draggingId = frame.id; card.classList.add('dragging'); if (event.dataTransfer) { event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', frame.id); } });
+      card.addEventListener('dragend', () => { state.draggingId = null; card.classList.remove('dragging'); clearDropZones(); });
+      card.addEventListener('dragover', (event) => { event.preventDefault(); if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'; activateDropZone(insertionIndexAtPointer(event)); });
+      card.addEventListener('drop', (event) => { event.preventDefault(); const insertionIndex = insertionIndexAtPointer(event); clearDropZones(); reorderAtInsertionIndex(state.draggingId, insertionIndex); });
       const delayInput = card.querySelector('[data-delay]');
       delayInput.addEventListener('input', (event) => { frame.draftDelay = event.target.value; frame.error = ''; event.target.classList.remove('invalid'); card.querySelector('small').textContent = ''; });
       delayInput.addEventListener('blur', () => commitFrameDelay(frame, delayInput));
@@ -200,13 +215,13 @@ export function initWebPMaker({ notify = () => {} } = {}) {
     restartPreviewTimer();
   }
 
-  function reorderById(sourceId, targetId) {
-    if (!sourceId || sourceId === targetId) return;
+  function reorderAtInsertionIndex(sourceId, insertionIndex) {
+    if (!sourceId || !Number.isInteger(insertionIndex)) return;
     const sourceIndex = state.frames.findIndex((frame) => frame.id === sourceId);
-    const targetIndex = state.frames.findIndex((frame) => frame.id === targetId);
+    if (sourceIndex < 0) return;
     const [moved] = state.frames.splice(sourceIndex, 1);
-    const adjustedTarget = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
-    state.frames.splice(adjustedTarget, 0, moved);
+    const targetIndex = Math.max(0, Math.min(sourceIndex < insertionIndex ? insertionIndex - 1 : insertionIndex, state.frames.length));
+    state.frames.splice(targetIndex, 0, moved);
     state.currentFrame = 0;
     renderAll();
     restartPreviewTimer();
@@ -477,7 +492,7 @@ export function initWebPMaker({ notify = () => {} } = {}) {
     } finally {
       state.encoding = false;
       els.generateButton.disabled = false;
-      els.generateButton.textContent = 'WebP 저장';
+      els.generateButton.textContent = 'WebP 생성 및 저장';
     }
   }
 
