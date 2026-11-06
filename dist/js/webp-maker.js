@@ -288,7 +288,9 @@ export function initWebPMaker({ notify = () => {} } = {}) {
     const scale = els.fitMode.value === 'fill' ? Math.max(width / bitmap.width, height / bitmap.height) : Math.min(width / bitmap.width, height / bitmap.height);
     const drawWidth = bitmap.width * scale;
     const drawHeight = bitmap.height * scale;
-    context.drawImage(bitmap, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight);
+    const centerX = Math.round((width - drawWidth) / 2);
+    const centerY = Math.round((height - drawHeight) / 2);
+    context.drawImage(bitmap, centerX, centerY, drawWidth, drawHeight);
   }
 
   function renderPreview() {
