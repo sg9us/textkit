@@ -16,7 +16,8 @@ export function initWebPMaker({ notify = () => {} } = {}) {
     playing: true,
     previewTimer: null,
     resultUrl: null,
-    encoding: false
+    encoding: false,
+    pendingUploads: 0
   };
 
   const els = {
@@ -84,8 +85,10 @@ export function initWebPMaker({ notify = () => {} } = {}) {
   }
 
   async function addFiles(fileList) {
+    if (state.encoding) return;
     const files = [...fileList];
     if (!files.length) return;
+    state.pendingUploads += 1;
     let added = 0;
     const errors = [];
     for (const file of files) {
@@ -115,6 +118,7 @@ export function initWebPMaker({ notify = () => {} } = {}) {
       }
     }
     els.fileInput.value = '';
+    state.pendingUploads -= 1;
     if (added) {
       state.currentFrame = Math.min(state.currentFrame, state.frames.length - 1);
       state.playing = true;
@@ -162,7 +166,7 @@ export function initWebPMaker({ notify = () => {} } = {}) {
           <div class="frame-size">${frame.width} × ${frame.height}</div>
           <div class="move-actions"><button type="button" data-move="up" aria-label="${index + 1}번 프레임 위로 이동" ${index === 0 ? 'disabled' : ''}>↑ 위로</button><button type="button" data-move="down" aria-label="${index + 1}번 프레임 아래로 이동" ${index === state.frames.length - 1 ? 'disabled' : ''}>↓ 아래로</button></div>
         </div>
-        <label class="delay-field"><span class="sr-only">${index + 1}번 프레임 DELAY</span><input inputmode="numeric" value="${frame.draftDelay}" data-delay aria-label="${index + 1}번 프레임 DELAY (ms)" class="${frame.error ? 'invalid' : ''}"><small>${escapeHTML(frame.error)}</small></label>
+        <label class="delay-field"><span class="sr-only">${index + 1}번 프레임 DELAY</span><input inputmode="numeric" value="${escapeHTML(frame.draftDelay)}" data-delay aria-label="${index + 1}번 프레임 DELAY (ms)" class="${frame.error ? 'invalid' : ''}"><small>${escapeHTML(frame.error)}</small></label>
         <div class="frame-actions"><button class="frame-icon-btn" type="button" data-duplicate aria-label="${index + 1}번 프레임 복제" title="복제"><svg class="frame-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="10" height="10" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></button><button class="frame-icon-btn danger" type="button" data-delete aria-label="${index + 1}번 프레임 삭제" title="삭제">×</button></div>
       </article>`).join('')}<div class="frame-drop-zone" data-insert-index="${state.frames.length}" aria-hidden="true"></div>`;
 
@@ -180,7 +184,7 @@ export function initWebPMaker({ notify = () => {} } = {}) {
     });
 
     els.frameList.querySelectorAll('.frame-card').forEach((card) => {
-      const frame = state.frames.find((item) => item.id === card.dataset.id);
+      const frame = state.frames[Number(card.dataset.frameIndex)];
       const insertionIndexAtPointer = (event) => Number(card.dataset.frameIndex) + (event.clientY >= card.getBoundingClientRect().top + card.offsetHeight / 2 ? 1 : 0);
       card.addEventListener('dragstart', (event) => { state.draggingId = frame.id; card.classList.add('dragging'); if (event.dataTransfer) { event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', frame.id); } });
       card.addEventListener('dragend', () => { state.draggingId = null; card.classList.remove('dragging'); clearDropZones(); });
@@ -304,7 +308,7 @@ export function initWebPMaker({ notify = () => {} } = {}) {
     const first = state.frames[0];
     if (!first) return { width: 1, height: 1 };
     if (els.sizeMode.value === 'first') return { width: first.width, height: first.height };
-    return { width: Number(els.outputWidth.value) || first.width, height: Number(els.outputHeight.value) || first.height };
+    return { width: Number(els.outputWidth.value), height: Number(els.outputHeight.value) };
   }
 
   function updateSizeFields() {
@@ -336,6 +340,7 @@ export function initWebPMaker({ notify = () => {} } = {}) {
     state.currentFrame = Math.min(state.currentFrame, state.frames.length - 1);
     const frame = state.frames[state.currentFrame];
     const size = outputSize();
+    if (![size.width, size.height].every(value => Number.isInteger(value) && value >= 1 && value <= MAX_DIMENSION)) return;
     const scale = Math.min(1, 600 / size.width, 600 / size.height);
     const width = Math.max(1, Math.round(size.width * scale));
     const height = Math.max(1, Math.round(size.height * scale));
@@ -358,7 +363,11 @@ export function initWebPMaker({ notify = () => {} } = {}) {
     }, state.frames[state.currentFrame].delay);
   }
 
-  function restartPreviewTimer() { clearTimeout(state.previewTimer); renderPreview(); startPreview(); }
+  function restartPreviewTimer() {
+    clearTimeout(state.previewTimer);
+    if (state.playing) startPreview();
+    else renderPreview();
+  }
 
   function setEncodeStatus(message, type = '') {
     els.encodeStatus.textContent = message;
@@ -440,59 +449,68 @@ export function initWebPMaker({ notify = () => {} } = {}) {
   }
 
   async function generateAndSave() {
+    if (state.encoding) return;
+    if (state.pendingUploads) { setEncodeStatus('이미지 추가가 완료된 후 다시 저장해 주세요.', 'error'); return; }
     const validationError = validateOutput();
     if (validationError) { setEncodeStatus(validationError, 'error'); return; }
-    const fileName = `${(els.outputName.value || 'animation').trim().replace(/\.webp$/i, '').replace(/[\\/:*?"<>|]+/g, '') || 'animation'}.webp`;
-    let fileHandle = null;
-    if (typeof window.showSaveFilePicker === 'function') {
-      try { fileHandle = await window.showSaveFilePicker({ suggestedName: fileName, types: [{ description: 'Animated WebP', accept: { 'image/webp': ['.webp'] } }] }); }
-      catch (error) { if (error?.name === 'AbortError') return; setEncodeStatus(`저장 창을 열 수 없습니다: ${error.message}`, 'error'); return; }
-    }
     state.encoding = true;
-    els.generateButton.disabled = true;
-    els.generateButton.textContent = 'WebP 생성 중…';
-    els.progressBar.style.width = '2%';
-    els.result.hidden = true;
-    setEncodeStatus('프레임을 WebP로 인코딩하고 있습니다.');
+    els.workspace.inert = true;
+    els.dropZone.inert = true;
     try {
-      const { width, height } = outputSize();
-      const canvas = document.createElement('canvas');
-      canvas.width = width; canvas.height = height;
-      const context = canvas.getContext('2d');
-      const encodedFrames = [];
-      for (let index = 0; index < state.frames.length; index += 1) {
-        const frame = state.frames[index];
-        paintFrame(context, frame.bitmap, width, height);
-        const blob = await canvasToWebP(canvas, Number(els.quality.value) / 100);
-        encodedFrames.push({ chunks: extractImageChunks(await blob.arrayBuffer()), delay: frame.delay });
-        els.progressBar.style.width = `${Math.round(((index + 1) / state.frames.length) * 85)}%`;
-        setEncodeStatus(`${index + 1} / ${state.frames.length} 프레임 인코딩 중`);
-        await new Promise((resolve) => setTimeout(resolve, 0));
+      const fileName = `${(els.outputName.value || 'animation').trim().replace(/\.webp$/i, '').replace(/[\\/:*?"<>|]+/g, '') || 'animation'}.webp`;
+      let fileHandle = null;
+      if (typeof window.showSaveFilePicker === 'function') {
+        try { fileHandle = await window.showSaveFilePicker({ suggestedName: fileName, types: [{ description: 'Animated WebP', accept: { 'image/webp': ['.webp'] } }] }); }
+        catch (error) { if (error?.name === 'AbortError') return; setEncodeStatus(`저장 창을 열 수 없습니다: ${error.message}`, 'error'); return; }
       }
-      const loopCount = els.loopInfinite.checked ? 0 : Number(els.loopCount.value);
-      const bytes = makeAnimatedWebP(encodedFrames, width, height, loopCount);
-      const inspected = inspectAnimatedWebP(bytes);
-      if (inspected.frames !== state.frames.length || inspected.durations.some((duration, index) => duration !== state.frames[index].delay)) throw new Error('프레임 수 또는 DELAY 검증에 실패했습니다.');
-      const blob = new Blob([bytes], { type: 'image/webp' });
-      if (fileHandle) { const writable = await fileHandle.createWritable(); await writable.write(blob); await writable.close(); }
-      else { const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = fileName; anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1500); }
-      if (state.resultUrl) URL.revokeObjectURL(state.resultUrl);
-      state.resultUrl = URL.createObjectURL(blob);
-      els.resultImage.src = state.resultUrl;
-      els.resultMeta.textContent = `${inspected.frames}개 프레임 · ${width}×${height} · ${formatBytes(blob.size)}`;
-      els.resultDownload.href = state.resultUrl;
-      els.resultDownload.download = fileName;
-      els.result.hidden = false;
-      els.progressBar.style.width = '100%';
-      setEncodeStatus(`생성 및 저장 완료 · ${formatBytes(blob.size)}`, 'success');
-      notify('Animated WebP 저장을 완료했습니다.');
-    } catch (error) {
-      setEncodeStatus(`생성 실패: ${error.message} 이미지 크기를 줄이거나 다시 시도해 주세요.`, 'error');
-      els.progressBar.style.width = '0%';
+      els.generateButton.disabled = true;
+      els.generateButton.textContent = 'WebP 생성 중…';
+      els.progressBar.style.width = '2%';
+      els.result.hidden = true;
+      setEncodeStatus('프레임을 WebP로 인코딩하고 있습니다.');
+      try {
+        const { width, height } = outputSize();
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        const context = canvas.getContext('2d');
+        const encodedFrames = [];
+        for (let index = 0; index < state.frames.length; index += 1) {
+          const frame = state.frames[index];
+          paintFrame(context, frame.bitmap, width, height);
+          const blob = await canvasToWebP(canvas, Number(els.quality.value) / 100);
+          encodedFrames.push({ chunks: extractImageChunks(await blob.arrayBuffer()), delay: frame.delay });
+          els.progressBar.style.width = `${Math.round(((index + 1) / state.frames.length) * 85)}%`;
+          setEncodeStatus(`${index + 1} / ${state.frames.length} 프레임 인코딩 중`);
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+        const loopCount = els.loopInfinite.checked ? 0 : Number(els.loopCount.value);
+        const bytes = makeAnimatedWebP(encodedFrames, width, height, loopCount);
+        const inspected = inspectAnimatedWebP(bytes);
+        if (inspected.frames !== state.frames.length || inspected.durations.some((duration, index) => duration !== state.frames[index].delay)) throw new Error('프레임 수 또는 DELAY 검증에 실패했습니다.');
+        const blob = new Blob([bytes], { type: 'image/webp' });
+        if (fileHandle) { const writable = await fileHandle.createWritable(); await writable.write(blob); await writable.close(); }
+        else { const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = fileName; anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1500); }
+        if (state.resultUrl) URL.revokeObjectURL(state.resultUrl);
+        state.resultUrl = URL.createObjectURL(blob);
+        els.resultImage.src = state.resultUrl;
+        els.resultMeta.textContent = `${inspected.frames}개 프레임 · ${width}×${height} · ${formatBytes(blob.size)}`;
+        els.resultDownload.href = state.resultUrl;
+        els.resultDownload.download = fileName;
+        els.result.hidden = false;
+        els.progressBar.style.width = '100%';
+        setEncodeStatus(`생성 및 저장 완료 · ${formatBytes(blob.size)}`, 'success');
+        notify('Animated WebP 저장을 완료했습니다.');
+      } catch (error) {
+        setEncodeStatus(`생성 실패: ${error.message} 이미지 크기를 줄이거나 다시 시도해 주세요.`, 'error');
+        els.progressBar.style.width = '0%';
+      } finally {
+        els.generateButton.disabled = false;
+        els.generateButton.textContent = 'WebP 생성 및 저장';
+      }
     } finally {
       state.encoding = false;
-      els.generateButton.disabled = false;
-      els.generateButton.textContent = 'WebP 생성 및 저장';
+      els.workspace.inert = false;
+      els.dropZone.inert = false;
     }
   }
 

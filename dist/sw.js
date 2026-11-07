@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'textkit-shell-';
-const CACHE_NAME = `${CACHE_PREFIX}v1.5.7`;
+const CACHE_NAME = `${CACHE_PREFIX}v1.5.8`;
 const APP_SHELL = [
   './',
   './index.html',
@@ -8,6 +8,7 @@ const APP_SHELL = [
   './js/config.js',
   './js/webp-maker.js',
   './js/doc-md.js',
+  './js/markdown.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png'

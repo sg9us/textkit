@@ -1,3 +1,5 @@
+import { documentToMarkdown } from './markdown.js';
+
 let initialized = false;
 let controller = null;
 
@@ -17,15 +19,12 @@ export function initDocumentMd({ notify = () => {} } = {}) {
 
   let fileNameManuallyEdited = false;
   let pipBinding = null;
+  let saving = false;
 
   const TYPE_LABELS = {
     character: '캐릭터 설정', direction: '방향성_줄거리', prompt: '캐릭터 프롬프트',
     scene: '첫장면', detail: '상세페이지 html', custom: '기타'
   };
-
-  function escapeHTML(value) {
-    return value.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
-  }
 
   function safeFileName(value) {
     const base = value.trim().replace(/(?:\.md)+$/i, '').replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ').slice(0, 120) || '문서';
@@ -115,7 +114,6 @@ export function initDocumentMd({ notify = () => {} } = {}) {
       if (!original.isConnected) return;
       let element = original;
       const tag = element.tagName;
-      const style = element.getAttribute('style') || '';
       const weight = element.style.fontWeight;
       const isBold = weight === 'bold' || Number.parseInt(weight, 10) >= 600;
       const isItalic = element.style.fontStyle === 'italic';
@@ -141,7 +139,9 @@ export function initDocumentMd({ notify = () => {} } = {}) {
         return;
       }
       const href = element.tagName === 'A' ? element.getAttribute('href') : null;
+      const listStart = element.tagName === 'OL' ? element.getAttribute('start') : null;
       [...element.attributes].forEach((attribute) => element.removeAttribute(attribute.name));
+      if (listStart !== null && /^-?\d+$/.test(listStart)) element.setAttribute('start', listStart);
       if (element.tagName === 'A' && href && /^(https?:|mailto:)/i.test(href)) {
         element.setAttribute('href', href);
         element.setAttribute('rel', 'noopener noreferrer');
@@ -156,71 +156,8 @@ export function initDocumentMd({ notify = () => {} } = {}) {
     return documentCopy.body.innerHTML;
   }
 
-  function markdownInline(node) {
-    if (node.nodeType === Node.TEXT_NODE) return node.nodeValue.replace(/\u00a0/g, ' ');
-    if (node.nodeType !== Node.ELEMENT_NODE) return '';
-    const tag = node.tagName.toLowerCase();
-    const inner = [...node.childNodes].map(markdownInline).join('');
-    if (tag === 'strong' || tag === 'b') return inner.trim() ? `**${inner}**` : '';
-    if (tag === 'em' || tag === 'i') return inner.trim() ? `*${inner}*` : '';
-    if (tag === 'del' || tag === 's') return inner.trim() ? `~~${inner}~~` : '';
-    if (tag === 'code' && node.parentElement?.tagName !== 'PRE') return `\`${inner.replace(/`/g, '\\`')}\``;
-    if (tag === 'a') { const href = node.getAttribute('href'); return href ? `[${inner}](${href})` : inner; }
-    if (tag === 'br') return '  \n';
-    return inner;
-  }
-
-  function listToMarkdown(list, depth = 0) {
-    const ordered = list.tagName === 'OL';
-    const items = [...list.children].filter((child) => child.tagName === 'LI');
-    return items.map((item, index) => {
-      let content = '';
-      const nested = [];
-      [...item.childNodes].forEach((child) => {
-        if (child.nodeType === Node.ELEMENT_NODE && ['UL','OL'].includes(child.tagName)) nested.push(child);
-        else content += markdownInline(child);
-      });
-      const prefix = ordered ? `${index + 1}.` : '-';
-      const line = `${'  '.repeat(depth)}${prefix} ${content.trim()}`;
-      const children = nested.map((child) => listToMarkdown(child, depth + 1)).join('\n');
-      return children ? `${line}\n${children}` : line;
-    }).join('\n');
-  }
-
-  function tableToMarkdown(table) {
-    const rows = [...table.querySelectorAll('tr')].map((row) => [...row.children].filter((cell) => ['TH','TD'].includes(cell.tagName)).map((cell) => markdownInline(cell).replace(/\|/g, '\\|').replace(/\s*\n\s*/g, ' ').trim()));
-    if (!rows.length || !rows[0].length) return '';
-    const columns = Math.max(...rows.map((row) => row.length));
-    rows.forEach((row) => { while (row.length < columns) row.push(''); });
-    const line = (row) => `| ${row.join(' | ')} |`;
-    return [line(rows[0]), line(Array(columns).fill('---')), ...rows.slice(1).map(line)].join('\n');
-  }
-
-  function blockToMarkdown(node) {
-    if (node.nodeType === Node.TEXT_NODE) return node.nodeValue.trim() ? `${node.nodeValue.trim()}\n\n` : '';
-    if (node.nodeType !== Node.ELEMENT_NODE) return '';
-    const tag = node.tagName.toLowerCase();
-    if (/^h[1-6]$/.test(tag)) return `${'#'.repeat(Number(tag[1]))} ${markdownInline(node).trim()}\n\n`;
-    if (tag === 'p') { const content = markdownInline(node).trim(); return content ? `${content}\n\n` : ''; }
-    if (tag === 'div') {
-      const hasBlockChildren = [...node.children].some((child) => /^(H[1-6]|P|DIV|UL|OL|BLOCKQUOTE|HR|PRE|TABLE)$/.test(child.tagName));
-      if (hasBlockChildren) return [...node.childNodes].map(blockToMarkdown).join('');
-      const content = markdownInline(node).trim();
-      return content ? `${content}\n\n` : '';
-    }
-    if (tag === 'ul' || tag === 'ol') return `${listToMarkdown(node)}\n\n`;
-    if (tag === 'blockquote') return `${[...node.childNodes].map(blockToMarkdown).join('').trim().split('\n').map((line) => `> ${line}`).join('\n')}\n\n`;
-    if (tag === 'hr') return '---\n\n';
-    if (tag === 'pre') { const code = node.textContent.replace(/\n$/, ''); return `\`\`\`\n${code}\n\`\`\`\n\n`; }
-    if (tag === 'table') return `${tableToMarkdown(node)}\n\n`;
-    if (tag === 'br') return '\n';
-    if (['strong','b','em','i','del','s','code','a','span'].includes(tag)) return markdownInline(node);
-    return [...node.childNodes].map(blockToMarkdown).join('');
-  }
-
   function currentMarkdown() {
-    const markdown = [...els.editor.childNodes].map(blockToMarkdown).join('').replace(/\n{3,}/g, '\n\n').trim();
-    return markdown ? `${markdown}\n` : '';
+    return documentToMarkdown(els.editor);
   }
 
   function refreshPreview() {
@@ -260,6 +197,7 @@ export function initDocumentMd({ notify = () => {} } = {}) {
   }
 
   async function saveMarkdown(pickerWindow = window, feedbackButton = els.save) {
+    if (saving) return;
     const markdown = currentMarkdown();
     if (!markdown.trim()) { notify('저장할 문서 내용을 붙여넣어 주세요.'); return; }
     const fileName = safeFileName(els.fileName.value || generatedFileName());
@@ -270,6 +208,7 @@ export function initDocumentMd({ notify = () => {} } = {}) {
       window.focus();
       return;
     }
+    saving = true;
     try {
       const handle = await pickerHost.showSaveFilePicker({ suggestedName: fileName, types: [{ description: 'Markdown 문서', accept: { 'text/markdown': ['.md'] } }] });
       const writable = await handle.createWritable();
@@ -280,6 +219,8 @@ export function initDocumentMd({ notify = () => {} } = {}) {
     } catch (error) {
       if (error?.name === 'AbortError') return;
       notify(`저장 실패: ${error?.message || '파일을 저장하지 못했습니다.'}`);
+    } finally {
+      saving = false;
     }
   }
 
