@@ -1,4 +1,4 @@
-import { documentToMarkdown } from './markdown.js?v=1.6.0';
+import { documentToMarkdown } from './markdown.js?v=1.6.1';
 
 let initialized = false;
 let controller = null;
@@ -20,7 +20,20 @@ export function initDocumentMd({ notify = () => {} } = {}) {
   let fileNameManuallyEdited = false;
   let pipBinding = null;
   let saving = false;
-  let richPlainSource = null;
+
+  function hasDocumentFormatting(html) {
+    const copied = new DOMParser().parseFromString(html, 'text/html');
+    if (copied.querySelector('h1,h2,h3,h4,h5,h6,ul,ol,li,table,blockquote,pre,hr,em,i,s,del')) return true;
+    return [...copied.body.querySelectorAll('b,strong,span,p,div')].some((element) => {
+      if (['B','STRONG'].includes(element.tagName) && !element.querySelector('p,div,h1,h2,h3,h4,h5,h6,ul,ol,table')) {
+        return !/^(normal|400)$/i.test(element.style.fontWeight);
+      }
+      const style = element.style;
+      return /^(bold|[6-9]00)$/i.test(style.fontWeight)
+        || ((element.tagName === 'P' || element.tagName === 'DIV') && parseFontPixels(style.fontSize) >= 18)
+        || Boolean(style.marginLeft || style.paddingLeft);
+    });
+  }
 
   function insertPlainText(editor, value) {
     const doc = editor.ownerDocument;
@@ -41,23 +54,18 @@ export function initDocumentMd({ notify = () => {} } = {}) {
 
   function pasteDocument(editor, html, plain) {
     const empty = !editor.textContent && !editor.querySelector('img,hr,table');
-    const plainPreferred = Boolean(plain) && (!html || els.type.value === 'prompt');
+    const plainPreferred = Boolean(plain) && (!html || (els.type.value === 'prompt' && !hasDocumentFormatting(html)));
     const verbatim = plainPreferred && (empty || editor.dataset.verbatim === 'true');
     if (verbatim) {
       insertPlainText(editor, plain);
       editor.dataset.verbatim = 'true';
-    } else if (html && (!plain || els.type.value !== 'prompt')) {
+    } else if (html && !plainPreferred) {
       delete editor.dataset.verbatim;
       editor.ownerDocument.execCommand('insertHTML', false, sanitizeGoogleDocsHTML(html));
     } else {
       editor.ownerDocument.execCommand('insertText', false, plain);
     }
-    if (editor === els.editor) {
-      richPlainSource = empty && html && plain && !verbatim
-        ? { text: plain, html: editor.innerHTML }
-        : null;
-    }
-    return { richHtml: Boolean(html && !plainPreferred), sourceOnly: empty };
+    return { richHtml: Boolean(html && !plainPreferred) };
   }
 
   function handleVerbatimLineBreak(editor, event) {
@@ -69,7 +77,6 @@ export function initDocumentMd({ notify = () => {} } = {}) {
 
   function clearVerbatim(editor) {
     delete editor.dataset.verbatim;
-    richPlainSource = null;
   }
 
   const TYPE_LABELS = {
@@ -96,11 +103,6 @@ export function initDocumentMd({ notify = () => {} } = {}) {
     if (force || !fileNameManuallyEdited || !els.fileName.value.trim()) els.fileName.value = generatedFileName();
     localStorage.setItem('textkit.docProject', els.project.value);
     localStorage.setItem('textkit.docType', els.type.value);
-    if (els.type.value === 'prompt' && richPlainSource?.html === els.editor.innerHTML) {
-      els.editor.textContent = richPlainSource.text;
-      els.editor.dataset.verbatim = 'true';
-      richPlainSource = null;
-    }
     refreshPreview();
     syncPipFromMain();
   }
@@ -214,6 +216,16 @@ export function initDocumentMd({ notify = () => {} } = {}) {
     });
 
     documentCopy.body.querySelectorAll('strong strong').forEach((element) => unwrapElement(element));
+
+    // Google Docs can place a sublist directly under a list instead of under its item.
+    // Attach it to the preceding item so both the editor and Markdown keep the depth.
+    documentCopy.body.querySelectorAll('ul,ol').forEach((list) => {
+      [...list.children].forEach((child) => {
+        if (!['UL','OL'].includes(child.tagName)) return;
+        const previous = child.previousElementSibling;
+        if (previous?.tagName === 'LI') previous.append(child);
+      });
+    });
 
     return documentCopy.body.innerHTML;
   }
@@ -360,9 +372,6 @@ export function initDocumentMd({ notify = () => {} } = {}) {
         warning.textContent = 'Google Docs 서식을 Markdown으로 표현 가능한 구조로 정리했습니다.';
       } else doc.querySelector('#pDocWarning').classList.remove('show');
       syncMainFromPipEditor(editor);
-      richPlainSource = result.sourceOnly && result.richHtml && plain
-        ? { text: plain, html: els.editor.innerHTML }
-        : null;
     });
     editor.addEventListener('beforeinput', (event) => handleVerbatimLineBreak(editor, event));
     editor.addEventListener('input', () => syncMainFromPipEditor(editor));
