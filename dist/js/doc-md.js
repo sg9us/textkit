@@ -246,10 +246,17 @@ export function initDocumentMd({ notify = () => {} } = {}) {
   }
 
   function setSaveFeedback(button = els.save) {
-    const original = button.textContent;
-    button.textContent = '✓ 저장 완료';
+    const label = button.querySelector('[data-doc-save-label]');
+    const original = label?.textContent || button.textContent;
+    if (label) label.textContent = '✓ 저장 완료';
+    else button.textContent = '✓ 저장 완료';
     button.classList.add('success');
-    setTimeout(() => { button.textContent = original; button.classList.remove('success'); }, 1700);
+    setTimeout(() => {
+      const currentLabel = button.querySelector('[data-doc-save-label]');
+      if (currentLabel) currentLabel.textContent = original;
+      else button.textContent = original;
+      button.classList.remove('success');
+    }, 1700);
   }
 
   async function saveMarkdown(pickerWindow = window, feedbackButton = els.save) {

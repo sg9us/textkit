@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'textkit-shell-';
-const CACHE_NAME = `${CACHE_PREFIX}v1.5.4`;
+const CACHE_NAME = `${CACHE_PREFIX}v1.5.5`;
 const APP_SHELL = [
   './',
   './index.html',
