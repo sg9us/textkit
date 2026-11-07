@@ -15,3 +15,5 @@
 .doc-editor{line-height:1.58}
 .doc-save{display:flex;align-items:center;justify-content:center;gap:8px}
 .doc-save .icon{width:18px;height:18px}
+#docPanel>.doc-actions{grid-template-columns:220px 1fr}
+@media(max-width:620px){#docPanel>.doc-actions{grid-template-columns:1fr 1fr}}
