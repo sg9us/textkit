@@ -44,3 +44,10 @@ test('table pipes are escaped', () => {
   assert.equal(md(element('table', [element('tr', [element('th', [text('제목')])]), element('tr', [element('td', [text('a|b')])])])), '| 제목 |\n| --- |\n| a\\|b |\n');
 });
 test('empty editor returns empty content', () => assert.equal(md(), ''));
+
+test('verbatim editor preserves Markdown syntax, spaces, and trailing newlines', () => {
+  const original = '# 제목\n-항목  \n\n```text\n{{user}}\n```\n\n';
+  const editor = element('div', [text(original)]);
+  editor.dataset = { verbatim: 'true' };
+  assert.equal(documentToMarkdown(editor), original);
+});

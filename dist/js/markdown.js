@@ -79,6 +79,7 @@ export function nodesToMarkdown(nodes) {
 }
 
 export function documentToMarkdown(editor) {
+  if (editor.dataset?.verbatim === 'true') return editor.textContent;
   const markdown = nodesToMarkdown(editor.childNodes).trim();
   return markdown ? markdown + '\n' : '';
 }

@@ -20,6 +20,57 @@ export function initDocumentMd({ notify = () => {} } = {}) {
   let fileNameManuallyEdited = false;
   let pipBinding = null;
   let saving = false;
+  let richPlainSource = null;
+
+  function insertPlainText(editor, value) {
+    const doc = editor.ownerDocument;
+    const selection = doc.getSelection();
+    if (!selection?.rangeCount || !editor.contains(selection.anchorNode)) {
+      editor.append(doc.createTextNode(value));
+      return;
+    }
+    const range = selection.getRangeAt(0);
+    range.deleteContents();
+    const text = doc.createTextNode(value);
+    range.insertNode(text);
+    range.setStartAfter(text);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  function pasteDocument(editor, html, plain) {
+    const empty = !editor.textContent && !editor.querySelector('img,hr,table');
+    const plainPreferred = Boolean(plain) && (!html || els.type.value === 'prompt');
+    const verbatim = plainPreferred && (empty || editor.dataset.verbatim === 'true');
+    if (verbatim) {
+      insertPlainText(editor, plain);
+      editor.dataset.verbatim = 'true';
+    } else if (html && (!plain || els.type.value !== 'prompt')) {
+      delete editor.dataset.verbatim;
+      editor.ownerDocument.execCommand('insertHTML', false, sanitizeGoogleDocsHTML(html));
+    } else {
+      editor.ownerDocument.execCommand('insertText', false, plain);
+    }
+    if (editor === els.editor) {
+      richPlainSource = empty && html && plain && !verbatim
+        ? { text: plain, html: editor.innerHTML }
+        : null;
+    }
+    return { richHtml: Boolean(html && !plainPreferred), sourceOnly: empty };
+  }
+
+  function handleVerbatimLineBreak(editor, event) {
+    if (editor.dataset.verbatim !== 'true' || !['insertParagraph', 'insertLineBreak'].includes(event.inputType)) return;
+    event.preventDefault();
+    insertPlainText(editor, '\n');
+    editor.dispatchEvent(new editor.ownerDocument.defaultView.Event('input', { bubbles: true }));
+  }
+
+  function clearVerbatim(editor) {
+    delete editor.dataset.verbatim;
+    richPlainSource = null;
+  }
 
   const TYPE_LABELS = {
     character: '캐릭터 설정', direction: '방향성_줄거리', prompt: '캐릭터 프롬프트',
@@ -45,6 +96,12 @@ export function initDocumentMd({ notify = () => {} } = {}) {
     if (force || !fileNameManuallyEdited || !els.fileName.value.trim()) els.fileName.value = generatedFileName();
     localStorage.setItem('textkit.docProject', els.project.value);
     localStorage.setItem('textkit.docType', els.type.value);
+    if (els.type.value === 'prompt' && richPlainSource?.html === els.editor.innerHTML) {
+      els.editor.textContent = richPlainSource.text;
+      els.editor.dataset.verbatim = 'true';
+      richPlainSource = null;
+    }
+    refreshPreview();
     syncPipFromMain();
   }
 
@@ -165,6 +222,7 @@ export function initDocumentMd({ notify = () => {} } = {}) {
   }
 
   function exec(command, value = null) {
+    clearVerbatim(els.editor);
     els.editor.focus();
     document.execCommand(command, false, value);
     refreshPreview();
@@ -241,7 +299,11 @@ export function initDocumentMd({ notify = () => {} } = {}) {
   function syncPipFromMain() {
     if (!pipBinding || pipBinding.win.closed) return;
     const { doc, editor, project, type, customType, customWrap, fileName } = pipBinding;
-    if (doc.activeElement !== editor) editor.innerHTML = els.editor.innerHTML;
+    if (doc.activeElement !== editor) {
+      editor.innerHTML = els.editor.innerHTML;
+      if (els.editor.dataset.verbatim === 'true') editor.dataset.verbatim = 'true';
+      else delete editor.dataset.verbatim;
+    }
     if (doc.activeElement !== project) project.value = els.project.value;
     if (doc.activeElement !== type) type.value = els.type.value;
     if (doc.activeElement !== customType) customType.value = els.customType.value;
@@ -253,6 +315,8 @@ export function initDocumentMd({ notify = () => {} } = {}) {
 
   function syncMainFromPipEditor(editor) {
     els.editor.innerHTML = editor.innerHTML;
+    if (editor.dataset.verbatim === 'true') els.editor.dataset.verbatim = 'true';
+    else delete els.editor.dataset.verbatim;
     refreshPreview();
     if (pipBinding && !pipBinding.win.closed) {
       const preview = pipBinding.doc.querySelector('#pDocMarkdownPreview');
@@ -284,17 +348,21 @@ export function initDocumentMd({ notify = () => {} } = {}) {
       const plain = event.clipboardData?.getData('text/plain') || '';
       event.preventDefault();
       editor.focus();
-      if (html) {
-        doc.execCommand('insertHTML', false, sanitizeGoogleDocsHTML(html));
+      const result = pasteDocument(editor, html, plain);
+      if (result.richHtml) {
         const warning = doc.querySelector('#pDocWarning');
         warning.classList.toggle('show', /rowspan|colspan|font-size|color:/i.test(html));
         warning.textContent = 'Google Docs 서식을 Markdown으로 표현 가능한 구조로 정리했습니다.';
-      } else doc.execCommand('insertText', false, plain);
+      } else doc.querySelector('#pDocWarning').classList.remove('show');
       syncMainFromPipEditor(editor);
+      richPlainSource = result.sourceOnly && result.richHtml && plain
+        ? { text: plain, html: els.editor.innerHTML }
+        : null;
     });
+    editor.addEventListener('beforeinput', (event) => handleVerbatimLineBreak(editor, event));
     editor.addEventListener('input', () => syncMainFromPipEditor(editor));
 
-    const pipExec = (command, value = null) => { editor.focus(); doc.execCommand(command, false, value); syncMainFromPipEditor(editor); };
+    const pipExec = (command, value = null) => { clearVerbatim(editor); editor.focus(); doc.execCommand(command, false, value); syncMainFromPipEditor(editor); };
     doc.querySelector('#pDocBlockStyle').addEventListener('change', (event) => pipExec('formatBlock', event.target.value));
     doc.querySelectorAll('[data-pdoc-command]').forEach((button) => button.addEventListener('click', () => pipExec(button.dataset.pdocCommand)));
     doc.querySelector('#pDocHr').addEventListener('click', () => pipExec('insertHorizontalRule'));
@@ -324,6 +392,7 @@ export function initDocumentMd({ notify = () => {} } = {}) {
     doc.querySelector('#pDocClear').addEventListener('click', () => {
       if (!editor.textContent.trim() || pipWindow.confirm('편집 중인 문서를 모두 지울까요? 이 작업은 되돌릴 수 없습니다.')) {
         editor.innerHTML = '';
+        clearVerbatim(editor);
         syncMainFromPipEditor(editor);
         doc.querySelector('#pDocWarning').classList.remove('show');
       }
@@ -346,15 +415,15 @@ export function initDocumentMd({ notify = () => {} } = {}) {
     const html = event.clipboardData?.getData('text/html');
     const plain = event.clipboardData?.getData('text/plain') || '';
     event.preventDefault();
-    if (html) {
-      const sanitized = sanitizeGoogleDocsHTML(html);
-      document.execCommand('insertHTML', false, sanitized);
+    const result = pasteDocument(els.editor, html, plain);
+    if (result.richHtml) {
       els.warning.classList.toggle('show', /rowspan|colspan|font-size|color:/i.test(html));
       els.warning.textContent = 'Google Docs 서식을 Markdown으로 표현 가능한 구조로 정리했습니다. 병합 셀·글자색·사용자 지정 정렬은 원문 보기에서 확인해 주세요.';
-    } else document.execCommand('insertText', false, plain);
+    } else els.warning.classList.remove('show');
     refreshPreview();
     syncPipFromMain();
   });
+  els.editor.addEventListener('beforeinput', (event) => handleVerbatimLineBreak(els.editor, event));
   els.editor.addEventListener('input', () => { refreshPreview(); syncPipFromMain(); });
   els.blockStyle.addEventListener('change', () => exec('formatBlock', els.blockStyle.value));
   document.querySelectorAll('[data-doc-command]').forEach((button) => button.addEventListener('click', () => exec(button.dataset.docCommand)));
@@ -370,7 +439,7 @@ export function initDocumentMd({ notify = () => {} } = {}) {
     requestAnimationFrame(() => requestAnimationFrame(() => els.preview.scrollIntoView({ behavior: 'smooth', block: 'start' })));
   });
   els.copy.addEventListener('click', async () => { const markdown = currentMarkdown(); try { await navigator.clipboard.writeText(markdown); } catch { const area = document.createElement('textarea'); area.value = markdown; document.body.append(area); area.select(); document.execCommand('copy'); area.remove(); } notify('Markdown 원문을 복사했습니다.'); });
-  els.clear.addEventListener('click', () => { if (!els.editor.textContent.trim() || window.confirm('편집 중인 문서를 모두 지울까요? 이 작업은 되돌릴 수 없습니다.')) { els.editor.innerHTML = ''; refreshPreview(); syncPipFromMain(); els.warning.classList.remove('show'); } });
+  els.clear.addEventListener('click', () => { if (!els.editor.textContent.trim() || window.confirm('편집 중인 문서를 모두 지울까요? 이 작업은 되돌릴 수 없습니다.')) { els.editor.innerHTML = ''; clearVerbatim(els.editor); refreshPreview(); syncPipFromMain(); els.warning.classList.remove('show'); } });
   els.save.addEventListener('click', () => saveMarkdown());
   els.fallbackForm.addEventListener('submit', fallbackDownload);
   controller = { attachPipWindow, currentMarkdown, syncPipFromMain };
