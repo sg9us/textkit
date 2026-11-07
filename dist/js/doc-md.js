@@ -1,4 +1,4 @@
-import { documentToMarkdown } from './markdown.js';
+import { documentToMarkdown } from './markdown.js?v=1.6.0';
 
 let initialized = false;
 let controller = null;
@@ -133,39 +133,34 @@ export function initDocumentMd({ notify = () => {} } = {}) {
     element.replaceWith(fragment);
   }
 
+  function preserveParagraphBold(paragraph) {
+    const visit = (parent) => {
+      [...parent.childNodes].forEach((child) => {
+        if (child.nodeType === 3) {
+          if (!child.nodeValue.trim()) return;
+          const strong = paragraph.ownerDocument.createElement('strong');
+          child.replaceWith(strong);
+          strong.append(child);
+        } else if (child.nodeType === 1) {
+          if (['B','STRONG'].includes(child.tagName) || /^(normal|400)$/i.test(child.style.fontWeight)) return;
+          visit(child);
+        }
+      });
+    };
+    visit(paragraph);
+  }
+
   function sanitizeGoogleDocsHTML(html) {
     const parser = new DOMParser();
     const documentCopy = parser.parseFromString(html, 'text/html');
     const forbidden = 'script,style,iframe,object,embed,form,input,button,textarea,select,svg,math,link,meta,base,noscript';
     documentCopy.querySelectorAll(forbidden).forEach((element) => element.remove());
     const allowed = new Set(['H1','H2','H3','H4','H5','H6','P','BR','STRONG','B','EM','I','S','DEL','UL','OL','LI','BLOCKQUOTE','HR','A','TABLE','THEAD','TBODY','TFOOT','TR','TH','TD','CODE','PRE','DIV','SPAN']);
-    const documentTextLength = documentCopy.body.textContent.replace(/\s/g, '').length;
-
-    if (documentTextLength >= 40) {
-      [...documentCopy.body.querySelectorAll('b,strong,[style]')].forEach((element) => {
-        if (!element.isConnected) return;
-        const weight = element.style.fontWeight;
-        const hasBoldStyle = weight === 'bold' || Number.parseInt(weight, 10) >= 600;
-        const isBoldTag = element.tagName === 'B' || element.tagName === 'STRONG';
-        if (!hasBoldStyle && !isBoldTag) return;
-        const textLength = element.textContent.replace(/\s/g, '').length;
-        if (textLength / documentTextLength < 0.8) return;
-        if (isBoldTag) {
-          const wrapsDocumentStructure = Boolean(element.querySelector('p,div,h1,h2,h3,h4,h5,h6,ul,ol,blockquote,table,pre'));
-          if (wrapsDocumentStructure) unwrapElement(element);
-        } else element.style.removeProperty('font-weight');
-      });
-    }
-
-    const styledBoldTextNodes = new Set();
-    documentCopy.body.querySelectorAll('span[style]').forEach((element) => {
-      const weight = element.style.fontWeight;
-      if (weight !== 'bold' && !(Number.parseInt(weight, 10) >= 600)) return;
-      const walker = documentCopy.createTreeWalker(element, 4);
-      while (walker.nextNode()) styledBoldTextNodes.add(walker.currentNode);
+    // Clipboard wrappers can mark an entire document bold even when its paragraphs are not.
+    // Remove only wrappers around block structure; retain formatting on actual text runs.
+    [...documentCopy.body.querySelectorAll('b,strong,span')].forEach((element) => {
+      if (element.isConnected && element.querySelector('p,div,h1,h2,h3,h4,h5,h6,ul,ol,blockquote,table,pre')) unwrapElement(element);
     });
-    const styledBoldTextLength = [...styledBoldTextNodes].reduce((sum, node) => sum + node.nodeValue.replace(/\s/g, '').length, 0);
-    const suppressDocumentWideStyledBold = documentTextLength >= 40 && styledBoldTextLength / documentTextLength >= 0.8;
 
     [...documentCopy.body.querySelectorAll('*')].forEach((original) => {
       if (!original.isConnected) return;
@@ -176,18 +171,21 @@ export function initDocumentMd({ notify = () => {} } = {}) {
       const isItalic = element.style.fontStyle === 'italic';
       const isStrike = /line-through/i.test(element.style.textDecoration || element.style.textDecorationLine || '');
       const fontSize = parseFontPixels(element.style.fontSize || '');
+      const indent = Math.max(parseFontPixels(element.style.marginLeft || ''), parseFontPixels(element.style.paddingLeft || ''));
 
       if ((tag === 'P' || tag === 'DIV') && element.textContent.trim().length < 180) {
         if (fontSize >= 27) element = replaceTag(element, 'h1');
         else if (fontSize >= 22) element = replaceTag(element, 'h2');
         else if (fontSize >= 18 && isBold) element = replaceTag(element, 'h3');
       }
-      if (element.tagName === 'B') element = replaceTag(element, 'strong');
+      if (['B','STRONG'].includes(element.tagName) && /^(normal|400)$/i.test(weight)) element = replaceTag(element, 'span');
+      else if (element.tagName === 'B') element = replaceTag(element, 'strong');
       if (element.tagName === 'I') element = replaceTag(element, 'em');
       if (element.tagName === 'S') element = replaceTag(element, 'del');
       if (isStrike && !['DEL','S'].includes(element.tagName)) wrapContents(element, 'del');
       if (isItalic && !['EM','I'].includes(element.tagName)) wrapContents(element, 'em');
-      if (element.tagName === 'SPAN' && isBold && !suppressDocumentWideStyledBold) wrapContents(element, 'strong');
+      if (element.tagName === 'SPAN' && isBold) wrapContents(element, 'strong');
+      if (element.tagName === 'P' && isBold) preserveParagraphBold(element);
 
       if (!allowed.has(element.tagName)) {
         const fragment = documentCopy.createDocumentFragment();
@@ -208,7 +206,14 @@ export function initDocumentMd({ notify = () => {} } = {}) {
         while (element.firstChild) fragment.append(element.firstChild);
         element.replaceWith(fragment);
       }
+      if (element.isConnected && element.tagName === 'P' && indent >= 16 && !element.closest('li,td,th,blockquote')) {
+        const quote = documentCopy.createElement('blockquote');
+        element.replaceWith(quote);
+        quote.append(element);
+      }
     });
+
+    documentCopy.body.querySelectorAll('strong strong').forEach((element) => unwrapElement(element));
 
     return documentCopy.body.innerHTML;
   }

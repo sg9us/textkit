@@ -23,6 +23,9 @@ const md = (...nodes) => documentToMarkdown(element('div', nodes));
 test('adjacent root text and emphasis remain in one paragraph', () => {
   assert.equal(md(text('일반 '), element('strong', [text('강조')]), text(' 뒤')), '일반 **강조** 뒤\n');
 });
+test('spaces around bold runs stay outside Markdown markers', () => {
+  assert.equal(md(element('p', [element('strong', [text('굵은 앞 ')]), element('span', [text('보통')]), element('strong', [text(' 굵은 뒤')])])), '**굵은 앞** 보통 **굵은 뒤**\n');
+});
 test('nested container keeps inline text together between blocks', () => {
   assert.equal(md(element('div', [text('앞 '), element('em', [text('기울임')]), element('p', [text('다음')])])), '앞 *기울임*\n\n다음\n');
 });

@@ -3,9 +3,15 @@ function markdownInline(node) {
   if (node.nodeType !== 1) return '';
   const tag = node.tagName.toLowerCase();
   const inner = [...node.childNodes].map(markdownInline).join('');
-  if (tag === 'strong' || tag === 'b') return inner.trim() ? `**${inner}**` : '';
-  if (tag === 'em' || tag === 'i') return inner.trim() ? `*${inner}*` : '';
-  if (tag === 'del' || tag === 's') return inner.trim() ? `~~${inner}~~` : '';
+  const marked = (marker) => {
+    const leading = inner.match(/^\s*/u)[0];
+    const trailing = inner.match(/\s*$/u)[0];
+    const content = inner.slice(leading.length, inner.length - trailing.length);
+    return content ? `${leading}${marker}${content}${marker}${trailing}` : inner;
+  };
+  if (tag === 'strong' || tag === 'b') return marked('**');
+  if (tag === 'em' || tag === 'i') return marked('*');
+  if (tag === 'del' || tag === 's') return marked('~~');
   if (tag === 'code' && node.parentElement?.tagName !== 'PRE') return `\`${inner.replace(/`/g, '\\`')}\``;
   if (tag === 'a') { const href = node.getAttribute('href'); return href ? `[${inner}](${href})` : inner; }
   if (tag === 'br') return '  \n';
