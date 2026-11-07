@@ -1,3 +1,3 @@
 window.TEXTKIT_CONFIG = Object.freeze({
-  version: '1.5.6'
+  version: '1.5.7'
 });
