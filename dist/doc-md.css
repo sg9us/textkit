@@ -18,3 +18,4 @@
 #docPanel>.doc-actions{grid-template-columns:220px 1fr}
 @media(max-width:620px){#docPanel>.doc-actions{grid-template-columns:1fr 1fr}}
 .doc-editor p{margin:0 0 6px}
+.doc-toolbar-spacer{margin-left:auto;min-width:8px}.doc-toolbar-clear{display:flex;align-items:center;gap:6px;color:var(--g600);white-space:nowrap}.doc-toolbar-clear:hover{color:var(--red);background:color-mix(in srgb,var(--red) 8%,transparent)}.doc-toolbar-clear svg{width:17px;height:17px;display:block;flex:none}

@@ -153,11 +153,13 @@
           <button class="doc-tool" id="docLink" type="button" aria-label="링크 삽입" title="링크 삽입">↗</button>
           <button class="doc-tool" id="docHr" type="button" aria-label="구분선 삽입" title="구분선">―</button>
           <button class="doc-tool wide" id="docTable" type="button" aria-label="표 삽입">표</button>
+          <span class="doc-toolbar-spacer" aria-hidden="true"></span>
+          <button class="doc-tool wide doc-toolbar-clear" id="docClear" type="button" aria-label="문서 전체 지우기" title="전체 지우기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5"/></svg><span>전체 지우기</span></button>
         </div>
         <div class="doc-paper-wrap"><div class="doc-editor" id="docEditor" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="true" data-placeholder="텍스트를 여기에 붙여넣으세요."></div></div>
       </section>
       <div class="doc-warning" id="docWarning" role="status"></div>
-      <div class="doc-footer-row"><button class="doc-clear" id="docClear" type="button">문서 지우기</button><span class="doc-privacy">본문은 자동 저장되지 않으며 외부 서버로 전송되지 않습니다.</span></div>
+      <div class="doc-footer-row"><span class="doc-privacy">본문은 자동 저장되지 않으며 외부 서버로 전송되지 않습니다.</span></div>
 
       <section class="md-preview" id="docMarkdownPreview" hidden><div class="md-preview-head"><span class="md-preview-title">Markdown 원문</span><button class="md-copy" id="docMarkdownCopy" type="button">원문 전체 복사</button></div><pre class="md-source" id="docMarkdownSource" aria-label="변환된 Markdown 원문"></pre></section>
     </section>
@@ -269,12 +271,12 @@
                 <select id="pDocBlockStyle" aria-label="문단 스타일"><option value="p">일반 텍스트</option><option value="h1">제목 1</option><option value="h2">제목 2</option><option value="h3">제목 3</option><option value="blockquote">인용문</option><option value="pre">코드블록</option></select>
                 <button class="doc-tool" type="button" data-pdoc-command="bold" aria-label="굵게">B</button><button class="doc-tool" type="button" data-pdoc-command="italic" aria-label="기울임"><em>I</em></button><button class="doc-tool" type="button" data-pdoc-command="strikeThrough" aria-label="취소선"><s>S</s></button>
                 <button class="doc-tool wide" type="button" data-pdoc-command="insertUnorderedList" aria-label="글머리 기호 목록">• 목록</button><button class="doc-tool wide" type="button" data-pdoc-command="insertOrderedList" aria-label="번호 목록">1. 목록</button>
-                <button class="doc-tool" type="button" data-pdoc-command="outdent" aria-label="내어쓰기">←</button><button class="doc-tool" type="button" data-pdoc-command="indent" aria-label="들여쓰기">→</button><button class="doc-tool" id="pDocLink" type="button" aria-label="링크 삽입">↗</button><button class="doc-tool" id="pDocHr" type="button" aria-label="구분선 삽입">―</button><button class="doc-tool wide" id="pDocTable" type="button" aria-label="표 삽입">표</button>
+                <button class="doc-tool" type="button" data-pdoc-command="outdent" aria-label="내어쓰기">←</button><button class="doc-tool" type="button" data-pdoc-command="indent" aria-label="들여쓰기">→</button><button class="doc-tool" id="pDocLink" type="button" aria-label="링크 삽입">↗</button><button class="doc-tool" id="pDocHr" type="button" aria-label="구분선 삽입">―</button><button class="doc-tool wide" id="pDocTable" type="button" aria-label="표 삽입">표</button><span class="doc-toolbar-spacer" aria-hidden="true"></span><button class="doc-tool wide doc-toolbar-clear" id="pDocClear" type="button" aria-label="문서 전체 지우기" title="전체 지우기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5"/></svg><span>전체 지우기</span></button>
               </div>
               <div class="doc-editor" id="pDocEditor" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="true" data-placeholder="텍스트를 여기에 붙여넣으세요."></div>
             </section>
             <div class="doc-warning" id="pDocWarning" role="status"></div>
-            <div class="doc-footer-row"><button class="doc-clear" id="pDocClear" type="button">문서 지우기</button><span class="doc-privacy">본문은 자동 저장되지 않습니다.</span></div>
+            <div class="doc-footer-row"><span class="doc-privacy">본문은 자동 저장되지 않습니다.</span></div>
             <div class="doc-actions"><button class="doc-preview-toggle" id="pDocPreview" type="button">Markdown 보기</button><button class="md-copy" id="pDocCopy" type="button">Markdown 복사</button><button class="doc-save" id="pDocSave" type="button"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"/></svg><span data-doc-save-label>.md 파일로 저장</span></button></div>
             <section class="md-preview" id="pDocMarkdownPreview" hidden><pre class="md-source" id="pDocMarkdownSource" aria-label="변환된 Markdown 원문"></pre></section>
           </section>
