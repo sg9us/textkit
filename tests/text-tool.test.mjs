@@ -8,6 +8,26 @@ test('character counting normalizes NBSP, zero-width characters, and line ending
   assert.equal(countWithoutWhitespace(source), 3);
 });
 
+test('character counting follows JavaScript UTF-16 length semantics', () => {
+  assert.equal(countCharacters('ABC'), 3);
+  assert.equal(countCharacters('𝓓𝓮𝓱'), 6);
+  assert.equal(countCharacters('📍'), 2);
+  assert.equal(countCharacters('😀'), 2);
+});
+
+test('mathematical alphanumeric phrase uses UTF-16 units with and without spaces', () => {
+  const source = '𝓓𝓮𝓱, 𝓼𝓪𝓵𝓿𝓪𝓶𝓲 !';
+  assert.equal(countCharacters(source), 24);
+  assert.equal(countWithoutWhitespace(source), 22);
+  assert.equal(countCharacters(source), source.length);
+});
+
+test('legacy 469-code-point content counts as 480 UTF-16 units', () => {
+  const source = `${'가'.repeat(454)}𝓓𝓮𝓱, 𝓼𝓪𝓵𝓿𝓪𝓶𝓲 !📍`;
+  assert.equal(Array.from(source).length, 469);
+  assert.equal(countCharacters(source), 480);
+});
+
 test('rich editor count keeps the clipboard plain text instead of layout line breaks', () => {
   const editor = { innerText: '제목\n\n본문', textContent: '제목본문' };
   rememberRichPlainText(editor, '제목\n본문');

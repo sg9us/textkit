@@ -9,11 +9,11 @@ export function normalizePlainText(value = '') {
 }
 
 export function countCharacters(value = '') {
-  return Array.from(normalizePlainText(value)).length;
+  return normalizePlainText(value).length;
 }
 
 export function countWithoutWhitespace(value = '') {
-  return Array.from(normalizePlainText(value).replace(/\s/gu, '')).length;
+  return normalizePlainText(value).replace(/\s/gu, '').length;
 }
 
 function renderedEditorText(editor) {

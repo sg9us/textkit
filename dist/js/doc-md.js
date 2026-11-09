@@ -1,5 +1,5 @@
-import { documentToMarkdown } from './markdown.js?v=1.6.3';
-import { countCharacters, plainTextFromRichEditor, rememberRichPlainText } from './text-utils.js?v=1.6.3';
+import { documentToMarkdown } from './markdown.js?v=1.6.4';
+import { countCharacters, plainTextFromRichEditor, rememberRichPlainText } from './text-utils.js?v=1.6.4';
 
 let initialized = false;
 let controller = null;
