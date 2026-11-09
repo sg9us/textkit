@@ -49,12 +49,12 @@ function blockToMarkdown(node) {
   if (node.nodeType !== 1) return '';
   const tag = node.tagName.toLowerCase();
   if (/^h[1-6]$/.test(tag)) return `${'#'.repeat(Number(tag[1]))} ${markdownInline(node).trim()}\n\n`;
-  if (tag === 'p') { const content = markdownInline(node).trim(); return content ? `${content}\n\n` : ''; }
+  if (tag === 'p') { const content = markdownInline(node).trim(); return content ? `${content}\n\n` : '\n'; }
   if (tag === 'div') {
     const hasBlockChildren = [...node.children].some((child) => /^(H[1-6]|P|DIV|UL|OL|BLOCKQUOTE|HR|PRE|TABLE)$/.test(child.tagName));
     if (hasBlockChildren) return nodesToMarkdown(node.childNodes);
     const content = markdownInline(node).trim();
-    return content ? `${content}\n\n` : '';
+    return content ? `${content}\n\n` : '\n';
   }
   if (tag === 'ul' || tag === 'ol') return `${listToMarkdown(node)}\n\n`;
   if (tag === 'blockquote') return `${nodesToMarkdown(node.childNodes).trim().split('\n').map((line) => `> ${line}`).join('\n')}\n\n`;

@@ -1,4 +1,4 @@
-import { documentToMarkdown } from './markdown.js?v=1.6.1';
+import { documentToMarkdown } from './markdown.js?v=1.6.2';
 
 let initialized = false;
 let controller = null;
@@ -13,6 +13,7 @@ export function initDocumentMd({ notify = () => {} } = {}) {
     customTypeWrap: $('#docCustomTypeWrap'), fileName: $('#docFileName'), autoName: $('#docAutoName'),
     editor: $('#docEditor'), blockStyle: $('#docBlockStyle'), previewToggle: $('#docPreviewToggle'),
     preview: $('#docMarkdownPreview'), source: $('#docMarkdownSource'), copy: $('#docMarkdownCopy'),
+    textCopy: $('#docTextCopy'), characterCount: $('#docCharacterCount'),
     clear: $('#docClear'), save: $('#docSave'), warning: $('#docWarning'),
     fallbackDialog: $('#docSaveDialog'), fallbackName: $('#docFallbackName'), fallbackForm: $('#docSaveForm')
   };
@@ -20,6 +21,7 @@ export function initDocumentMd({ notify = () => {} } = {}) {
   let fileNameManuallyEdited = false;
   let pipBinding = null;
   let saving = false;
+  let fallbackMarkdown = '';
 
   function hasDocumentFormatting(html) {
     const copied = new DOMParser().parseFromString(html, 'text/html');
@@ -230,8 +232,26 @@ export function initDocumentMd({ notify = () => {} } = {}) {
     return documentCopy.body.innerHTML;
   }
 
+  function serializeMarkdown(editor = els.editor) {
+    return documentToMarkdown(editor);
+  }
+
   function currentMarkdown() {
-    return documentToMarkdown(els.editor);
+    return serializeMarkdown(els.editor);
+  }
+
+  function visibleEditorText(editor = els.editor) {
+    return typeof editor.innerText === 'string' ? editor.innerText.replace(/\r\n?/g, '\n') : editor.textContent || '';
+  }
+
+  function updateCharacterCounts() {
+    const text = visibleEditorText(els.editor);
+    const label = `공백 포함 ${text.length.toLocaleString('ko-KR')}자`;
+    els.characterCount.textContent = label;
+    if (pipBinding && !pipBinding.win.closed) {
+      const pipCount = pipBinding.doc.querySelector('#pDocCharacterCount');
+      if (pipCount) pipCount.textContent = label;
+    }
   }
 
   function refreshPreview() {
@@ -271,13 +291,59 @@ export function initDocumentMd({ notify = () => {} } = {}) {
     }, 1700);
   }
 
-  async function saveMarkdown(pickerWindow = window, feedbackButton = els.save) {
+  function setCopyFeedback(button) {
+    const label = button?.querySelector('[data-doc-copy-label]');
+    if (!button || !label) return;
+    const original = label.textContent;
+    label.textContent = '✓ 복사 완료';
+    button.classList.add('success');
+    setTimeout(() => { label.textContent = original; button.classList.remove('success'); }, 1500);
+  }
+
+  async function copyRichText(editor = els.editor, targetWindow = window, feedbackButton = els.textCopy) {
+    const plain = visibleEditorText(editor);
+    const html = editor.innerHTML;
+    if (!plain.trim() && !editor.querySelector('hr,table')) { notify('복사할 문서 내용을 붙여넣어 주세요.'); return; }
+    const clipboard = targetWindow.navigator?.clipboard || navigator.clipboard;
+    const ClipboardItemCtor = targetWindow.ClipboardItem || window.ClipboardItem;
+    try {
+      if (clipboard?.write && ClipboardItemCtor) {
+        await clipboard.write([new ClipboardItemCtor({
+          'text/html': new Blob([html], { type: 'text/html;charset=utf-8' }),
+          'text/plain': new Blob([plain], { type: 'text/plain;charset=utf-8' })
+        })]);
+      } else {
+        const doc = editor.ownerDocument;
+        const selection = doc.getSelection();
+        const savedRanges = selection ? [...Array(selection.rangeCount)].map((_, index) => selection.getRangeAt(index).cloneRange()) : [];
+        const range = doc.createRange();
+        range.selectNodeContents(editor);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+        const copied = doc.execCommand('copy');
+        selection?.removeAllRanges();
+        savedRanges.forEach((savedRange) => selection?.addRange(savedRange));
+        if (!copied) await clipboard.writeText(plain);
+      }
+      setCopyFeedback(feedbackButton);
+      notify('서식을 포함해 텍스트를 복사했습니다.');
+    } catch {
+      try {
+        await clipboard.writeText(plain);
+        setCopyFeedback(feedbackButton);
+        notify('텍스트를 복사했습니다. 이 브라우저에서는 일부 서식이 제외될 수 있습니다.');
+      } catch { notify('텍스트를 복사하지 못했습니다. 브라우저 권한을 확인해 주세요.'); }
+    }
+  }
+
+  async function saveMarkdown(pickerWindow = window, feedbackButton = els.save, sourceEditor = els.editor) {
     if (saving) return;
-    const markdown = currentMarkdown();
+    const markdown = serializeMarkdown(sourceEditor);
     if (!markdown.trim()) { notify('저장할 문서 내용을 붙여넣어 주세요.'); return; }
     const fileName = safeFileName(els.fileName.value || generatedFileName());
     const pickerHost = typeof pickerWindow.showSaveFilePicker === 'function' ? pickerWindow : window;
     if (typeof pickerHost.showSaveFilePicker !== 'function') {
+      fallbackMarkdown = markdown;
       els.fallbackName.value = fileName.replace(/\.md$/i, '');
       els.fallbackDialog.showModal();
       window.focus();
@@ -301,7 +367,7 @@ export function initDocumentMd({ notify = () => {} } = {}) {
 
   function fallbackDownload(event) {
     event.preventDefault();
-    const markdown = currentMarkdown();
+    const markdown = fallbackMarkdown || currentMarkdown();
     const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -310,6 +376,7 @@ export function initDocumentMd({ notify = () => {} } = {}) {
     anchor.click();
     setTimeout(() => URL.revokeObjectURL(url), 1200);
     els.fallbackDialog.close();
+    fallbackMarkdown = '';
     notify('다운로드를 시작했습니다. 저장 위치는 브라우저 설정을 따릅니다.');
   }
 
@@ -326,8 +393,7 @@ export function initDocumentMd({ notify = () => {} } = {}) {
     if (doc.activeElement !== customType) customType.value = els.customType.value;
     customWrap.hidden = els.type.value !== 'custom';
     if (doc.activeElement !== fileName) fileName.value = els.fileName.value;
-    const preview = doc.querySelector('#pDocMarkdownPreview');
-    if (preview && !preview.hidden) doc.querySelector('#pDocMarkdownSource').textContent = currentMarkdown();
+    updateCharacterCounts();
   }
 
   function syncMainFromPipEditor(editor) {
@@ -335,10 +401,7 @@ export function initDocumentMd({ notify = () => {} } = {}) {
     if (editor.dataset.verbatim === 'true') els.editor.dataset.verbatim = 'true';
     else delete els.editor.dataset.verbatim;
     refreshPreview();
-    if (pipBinding && !pipBinding.win.closed) {
-      const preview = pipBinding.doc.querySelector('#pDocMarkdownPreview');
-      if (preview && !preview.hidden) pipBinding.doc.querySelector('#pDocMarkdownSource').textContent = currentMarkdown();
-    }
+    updateCharacterCounts();
   }
 
   function attachPipWindow(pipWindow) {
@@ -388,21 +451,7 @@ export function initDocumentMd({ notify = () => {} } = {}) {
       pipExec('createLink', url);
     });
 
-    const preview = doc.querySelector('#pDocMarkdownPreview');
-    const source = doc.querySelector('#pDocMarkdownSource');
-    const previewButton = doc.querySelector('#pDocPreview');
-    previewButton.addEventListener('click', () => {
-      const open = preview.hidden;
-      preview.hidden = !open;
-      previewButton.textContent = open ? 'Markdown 닫기' : 'Markdown 보기';
-      if (open) source.textContent = currentMarkdown();
-    });
-    doc.querySelector('#pDocCopy').addEventListener('click', async () => {
-      const markdown = currentMarkdown();
-      try { await pipWindow.navigator.clipboard.writeText(markdown); }
-      catch { const area = doc.createElement('textarea'); area.value = markdown; doc.body.append(area); area.select(); doc.execCommand('copy'); area.remove(); }
-      notify('Markdown 원문을 복사했습니다.');
-    });
+    doc.querySelector('#pDocTextCopy').addEventListener('click', () => copyRichText(editor, pipWindow, doc.querySelector('#pDocTextCopy')));
     doc.querySelector('#pDocClear').addEventListener('click', () => {
       if (!editor.textContent.trim() || pipWindow.confirm('편집 중인 문서를 모두 지울까요? 이 작업은 되돌릴 수 없습니다.')) {
         editor.innerHTML = '';
@@ -411,7 +460,7 @@ export function initDocumentMd({ notify = () => {} } = {}) {
         doc.querySelector('#pDocWarning').classList.remove('show');
       }
     });
-    doc.querySelector('#pDocSave').addEventListener('click', () => saveMarkdown(pipWindow, doc.querySelector('#pDocSave')));
+    doc.querySelector('#pDocSave').addEventListener('click', () => saveMarkdown(pipWindow, doc.querySelector('#pDocSave'), editor));
     pipWindow.addEventListener('pagehide', () => { if (pipBinding?.win === pipWindow) pipBinding = null; });
   }
 
@@ -436,9 +485,10 @@ export function initDocumentMd({ notify = () => {} } = {}) {
     } else els.warning.classList.remove('show');
     refreshPreview();
     syncPipFromMain();
+    updateCharacterCounts();
   });
   els.editor.addEventListener('beforeinput', (event) => handleVerbatimLineBreak(els.editor, event));
-  els.editor.addEventListener('input', () => { refreshPreview(); syncPipFromMain(); });
+  els.editor.addEventListener('input', () => { refreshPreview(); syncPipFromMain(); updateCharacterCounts(); });
   els.blockStyle.addEventListener('change', () => exec('formatBlock', els.blockStyle.value));
   document.querySelectorAll('[data-doc-command]').forEach((button) => button.addEventListener('click', () => exec(button.dataset.docCommand)));
   $('#docLink').addEventListener('click', insertLink);
@@ -453,9 +503,11 @@ export function initDocumentMd({ notify = () => {} } = {}) {
     requestAnimationFrame(() => requestAnimationFrame(() => els.preview.scrollIntoView({ behavior: 'smooth', block: 'start' })));
   });
   els.copy.addEventListener('click', async () => { const markdown = currentMarkdown(); try { await navigator.clipboard.writeText(markdown); } catch { const area = document.createElement('textarea'); area.value = markdown; document.body.append(area); area.select(); document.execCommand('copy'); area.remove(); } notify('Markdown 원문을 복사했습니다.'); });
-  els.clear.addEventListener('click', () => { if (!els.editor.textContent.trim() || window.confirm('편집 중인 문서를 모두 지울까요? 이 작업은 되돌릴 수 없습니다.')) { els.editor.innerHTML = ''; clearVerbatim(els.editor); refreshPreview(); syncPipFromMain(); els.warning.classList.remove('show'); } });
-  els.save.addEventListener('click', () => saveMarkdown());
+  els.textCopy.addEventListener('click', () => copyRichText());
+  els.clear.addEventListener('click', () => { if (!els.editor.textContent.trim() || window.confirm('편집 중인 문서를 모두 지울까요? 이 작업은 되돌릴 수 없습니다.')) { els.editor.innerHTML = ''; clearVerbatim(els.editor); refreshPreview(); syncPipFromMain(); updateCharacterCounts(); els.warning.classList.remove('show'); } });
+  els.save.addEventListener('click', () => saveMarkdown(window, els.save, els.editor));
   els.fallbackForm.addEventListener('submit', fallbackDownload);
-  controller = { attachPipWindow, currentMarkdown, syncPipFromMain };
+  updateCharacterCounts();
+  controller = { attachPipWindow, currentMarkdown, serializeMarkdown, syncPipFromMain };
   return controller;
 }

@@ -48,6 +48,23 @@ test('table pipes are escaped', () => {
 });
 test('empty editor returns empty content', () => assert.equal(md(), ''));
 
+test('intentional empty paragraphs remain as blank lines', () => {
+  assert.equal(md(element('p', [text('첫 문단')]), element('p', [element('br')]), element('p', [text('다음 문단')])), '첫 문단\n\n\n다음 문단\n');
+});
+
+test('main and PiP editors serialize identical structured content the same way', () => {
+  const content = () => [
+    element('h2', [text('제목')]),
+    element('p', [text('본문 '), element('strong', [text('강조')])]),
+    element('ul', [element('li', [text('상위'), element('ul', [element('li', [text('하위')])])])]),
+    element('p', [element('br')]),
+    element('table', [element('tr', [element('th', [text('열')])]), element('tr', [element('td', [text('값')])])])
+  ];
+  const mainEditor = element('div', content());
+  const pipEditor = element('div', content());
+  assert.equal(documentToMarkdown(mainEditor), documentToMarkdown(pipEditor));
+});
+
 test('verbatim editor preserves Markdown syntax, spaces, and trailing newlines', () => {
   const original = '# 제목\n-항목  \n\n```text\n{{user}}\n```\n\n';
   const editor = element('div', [text(original)]);
