@@ -1,5 +1,5 @@
 const ZERO_WIDTH = /[\u200B-\u200D\u2060\uFEFF]/gu;
-const plainTextSnapshots = new WeakMap();
+const LINE_BLOCKS = new Set(['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI', 'BLOCKQUOTE', 'PRE', 'TR']);
 
 export function normalizePlainText(value = '') {
   return String(value)
@@ -16,30 +16,20 @@ export function countWithoutWhitespace(value = '') {
   return normalizePlainText(value).replace(/\s/gu, '').length;
 }
 
-function renderedEditorText(editor) {
-  const visible = typeof editor?.innerText === 'string' ? editor.innerText : editor?.textContent || '';
-  return normalizePlainText(visible);
+function canonicalNodeText(node) {
+  if (node?.nodeType === 3) return node.nodeValue || '';
+  if (node?.nodeType !== 1) return '';
+  if (node.tagName === 'BR') return '\n';
+  let text = Array.from(node.childNodes || [], canonicalNodeText).join('');
+  if (LINE_BLOCKS.has(node.tagName) && !text.endsWith('\n')) text += '\n';
+  // Google Docs preserves one blank line after a table in text/plain.
+  if (node.tagName === 'TABLE') text += '\n';
+  return text;
 }
 
-export function rememberRichPlainText(editor, plainText) {
-  if (!editor) return;
-  plainTextSnapshots.set(editor, {
-    fingerprint: renderedEditorText(editor),
-    text: normalizePlainText(plainText)
-  });
-}
-
-export function plainTextFromRichEditor(editor) {
-  const fingerprint = renderedEditorText(editor);
-  const snapshot = plainTextSnapshots.get(editor);
-  if (snapshot?.fingerprint === fingerprint) return snapshot.text;
-  rememberRichPlainText(editor, fingerprint);
-  return fingerprint;
-}
-
-export function syncRichPlainText(sourceEditor, targetEditor) {
-  if (!sourceEditor || !targetEditor) return;
-  rememberRichPlainText(targetEditor, plainTextFromRichEditor(sourceEditor));
+export function getEditorPlainText(editor) {
+  if (!editor) return '';
+  return normalizePlainText(Array.from(editor.childNodes || [], canonicalNodeText).join(''));
 }
 
 export function processPrompt(text) {

@@ -133,7 +133,7 @@
         <label class="field"><span class="field-label">작품 이름</span><input id="docProjectName" placeholder="작품 이름을 입력하세요" autocomplete="off"></label>
         <label class="field"><span class="field-label">문서 종류</span><select id="docType"><option value="character">캐릭터 설정</option><option value="direction">방향성_줄거리</option><option value="prompt">캐릭터 프롬프트</option><option value="scene">첫장면</option><option value="detail">상세페이지 html</option><option value="custom">기타 (직접 입력)</option></select></label>
         <label class="field doc-custom-type" id="docCustomTypeWrap" hidden><span class="field-label">기타 문서 종류</span><input id="docCustomType" placeholder="문서 종류를 입력하세요" autocomplete="off"></label>
-        <label class="field"><span class="field-label">저장 파일명</span><span class="doc-filename-row"><input id="docFileName" autocomplete="off"><button class="doc-auto-name" id="docAutoName" type="button">자동 이름 사용</button></span><span class="doc-name-hint">직접 수정한 파일명은 작품명이나 문서 종류를 바꿔도 덮어쓰지 않습니다.</span><span class="doc-character-count" id="docCharacterCount">공백 포함 0자</span></label>
+        <label class="field"><span class="field-label">저장 파일명</span><span class="doc-filename-row"><input id="docFileName" autocomplete="off"><button class="doc-auto-name" id="docAutoName" type="button">자동 이름 사용</button></span><span class="doc-meta-row"><span class="doc-name-hint">직접 수정한 파일명은 작품명이나 문서 종류를 바꿔도 덮어쓰지 않습니다.</span><span class="doc-character-count" id="docCharacterCount">공백 포함 0자</span></span></label>
       </section>
 
       <section class="doc-editor-shell" aria-label="서식 있는 문서 편집기">
@@ -174,7 +174,7 @@
 
   <script src="./js/config.js"></script>
   <script type="module">
-  import { countCharacters, countWithoutWhitespace, transformText } from './js/text-utils.js?v=1.6.4';
+  import { countCharacters, countWithoutWhitespace, transformText } from './js/text-utils.js?v=1.6.5';
   (()=>{
     'use strict';
     const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -275,7 +275,6 @@
             <section class="result pip-result" id="pResultBox" aria-label="미니창 정리 결과" hidden><div class="result-head"><div class="result-title-wrap"><span class="success-dot" aria-hidden="true">✓</span><h2>정리 결과</h2></div><span class="result-meta" id="pResultMeta">0자 · 변동 없음</span></div><div class="result-text" id="pResultText" tabindex="0"></div><div class="result-actions"><button class="apply-btn text-secondary-action" id="pResultCopy"><span>텍스트 복사</span></button><button class="apply-btn" id="pResultApply">원문에 적용</button></div></section>
           </section>
           <section class="pip-panel" id="pDocPanel" role="tabpanel" hidden>
-            <div class="pip-doc-count" id="pDocCharacterCount">공백 포함 0자</div>
             <div class="doc-actions"><button class="doc-copy" id="pDocTextCopy" type="button"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg><span data-doc-copy-label>텍스트 복사</span></button><button class="doc-save" id="pDocSave" type="button"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"/></svg><span data-doc-save-label>.md 파일로 저장</span></button></div>
             <div class="pip-doc-settings">
               <label class="field"><span class="field-label">작품 이름</span><input id="pDocProject" placeholder="작품 이름"></label>
@@ -283,6 +282,7 @@
               <label class="field doc-custom-type" id="pDocCustomWrap" hidden><span class="field-label">기타 문서 종류</span><input id="pDocCustomType" placeholder="문서 종류"></label>
               <label class="field pip-file"><span class="field-label">저장 파일명</span><span class="doc-filename-row"><input id="pDocFileName"><button class="doc-auto-name" id="pDocAutoName" type="button">자동 이름</button></span></label>
             </div>
+            <div class="pip-doc-count" id="pDocCharacterCount">공백 포함 0자</div>
             <section class="doc-editor-shell" aria-label="미니창 서식 문서 편집기">
               <div class="doc-toolbar" role="toolbar" aria-label="문서 서식 도구">
                 <select id="pDocBlockStyle" aria-label="문단 스타일"><option value="p">일반 텍스트</option><option value="h1">제목 1</option><option value="h2">제목 2</option><option value="h3">제목 3</option><option value="blockquote">인용문</option><option value="pre">코드블록</option></select>

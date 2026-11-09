@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { countCharacters, countWithoutWhitespace, plainTextFromRichEditor, processPrompt, rememberRichPlainText, transformText } from '../dist/js/text-utils.js';
+import { countCharacters, countWithoutWhitespace, getEditorPlainText, processPrompt, transformText } from '../dist/js/text-utils.js';
+
+const textNode = (value) => ({ nodeType: 3, nodeValue: value });
+const element = (tagName, ...childNodes) => ({ nodeType: 1, tagName, childNodes });
+const editorRoot = (...childNodes) => ({ childNodes });
 
 test('character counting normalizes NBSP, zero-width characters, and line endings', () => {
   const source = `가\u00a0나\u200B\r\n다\u2060`;
@@ -28,13 +32,33 @@ test('legacy 469-code-point content counts as 480 UTF-16 units', () => {
   assert.equal(countCharacters(source), 480);
 });
 
-test('rich editor count keeps the clipboard plain text instead of layout line breaks', () => {
-  const editor = { innerText: '제목\n\n본문', textContent: '제목본문' };
-  rememberRichPlainText(editor, '제목\n본문');
-  assert.equal(plainTextFromRichEditor(editor), '제목\n본문');
-  assert.equal(countCharacters(plainTextFromRichEditor(editor)), countCharacters('제목\n본문'));
-  editor.innerText = '제목\n\n수정 본문';
-  assert.equal(plainTextFromRichEditor(editor), '제목\n\n수정 본문');
+test('rich editor canonical text adds only semantic line breaks', () => {
+  const editor = editorRoot(
+    element('P', textNode('제목')),
+    element('P', textNode('본문')),
+    element('DIV', element('BR')),
+    element('TABLE', element('TBODY', element('TR', element('TD', element('P', textNode('셀')))))),
+    element('P', textNode('끝')),
+    element('BR'),
+    element('BR')
+  );
+  assert.equal(getEditorPlainText(editor), '제목\n본문\n\n셀\n\n끝\n\n\n');
+});
+
+test('rich editor edits change only the edited UTF-16 units', () => {
+  const value = textNode('가 나');
+  const editor = editorRoot(element('P', value));
+  const before = countCharacters(getEditorPlainText(editor));
+  value.nodeValue = '가나';
+  assert.equal(countCharacters(getEditorPlainText(editor)), before - 1);
+  value.nodeValue = '가나다';
+  assert.equal(countCharacters(getEditorPlainText(editor)), before);
+});
+
+test('bold and heading level changes do not affect rich editor count', () => {
+  const boldHeading = editorRoot(element('H1', element('STRONG', textNode('제목'))));
+  const plainHeading = editorRoot(element('H2', textNode('제목')));
+  assert.equal(getEditorPlainText(boldHeading), getEditorPlainText(plainHeading));
 });
 
 test('prompt formatting keeps heading spaces and every line break', () => {
