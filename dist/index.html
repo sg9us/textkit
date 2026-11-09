@@ -173,7 +173,8 @@
   <div class="toast" id="toast" role="status"></div>
 
   <script src="./js/config.js"></script>
-  <script>
+  <script type="module">
+  import { countCharacters, countWithoutWhitespace, transformText } from './js/text-utils.js?v=1.6.3';
   (()=>{
     'use strict';
     const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -182,44 +183,28 @@
     const editor=$('#editor'), taskType=$('#taskType'), resultBox=$('#resultBox'), resultText=$('#resultText'), resultMeta=$('#resultMeta');
     const APP_VERSION=window.TEXTKIT_CONFIG.version;
     const pipSupported='documentPictureInPicture' in window;
-    let activeTool='prompt', cleanupApplied=false, currentResult='', pipWindow=null, toastTimer, webpLoaded=false, docLoaded=false, docController=null, currentTab='text';
-    const chars=s=>Array.from(s).length;
-    const withoutWhitespace=s=>chars(s.replace(/\s/gu,''));
+    let activeTool='prompt', cleanupApplied=false, currentResult='', sourceText='', pipWindow=null, toastTimer, webpLoaded=false, docLoaded=false, docController=null, currentTab='text';
+    const chars=countCharacters;
+    const withoutWhitespace=countWithoutWhitespace;
     const format=n=>n.toLocaleString('ko-KR');
     const state={autosave:localStorage.getItem('textkit.autosave')==='true',theme:localStorage.getItem('textkit.theme')==='dark'?'dark':'light'};
 
     function updateCounts(){
-      const n=chars(editor.value), no=withoutWhitespace(editor.value), limit=limits[taskType.value];
+      const n=chars(sourceText), no=withoutWhitespace(sourceText), limit=limits[taskType.value];
       $('#countAll').textContent=`${format(n)}자`; $('#countNoSpace').textContent=`${format(no)}자`;
       $('#limitBox').hidden=limit===null;
       if(limit!==null){const diff=limit-n, over=diff<0, pct=Math.min(100,(n/limit)*100);$('#limitLabel').textContent=over?`${format(-diff)}자 초과`:`${format(diff)}자 남음`;$('#limitLabel').classList.toggle('over',over);$('#progressBar').style.width=`${pct}%`;$('#progressBar').classList.toggle('over',over)}
-      if(cleanupApplied)renderResult(); if(state.autosave)localStorage.setItem('textkit.draft',editor.value); syncPip();
+      if(cleanupApplied)renderResult(); if(state.autosave)localStorage.setItem('textkit.draft',sourceText); syncPip();
     }
-    function processPrompt(text){
-      let fence=null;
-      return text.split(/(\r\n|\n|\r)/).map((part,index)=>{
-        if(index%2)return part;
-        const marker=part.match(/^ {0,3}(`{3,}|~{3,})/);
-        if(marker){
-          const run=marker[1];
-          if(!fence)fence={character:run[0],length:run.length};
-          else if(run[0]===fence.character&&run.length>=fence.length&&new RegExp(`^ {0,3}${fence.character==='`'?'`':'~'}{${fence.length},}[ \t]*$`).test(part))fence=null;
-          return part;
-        }
-        if(fence)return part;
-        const heading=part.match(/^( {0,3})(#{1,4})[ \t]+(.*)$/);
-        return heading?`${heading[1]}${heading[2]} ${heading[3].replace(/[ \t]/g,'')}`:part.replace(/[ \t]/g,'');
-      }).join('');
-    }
-    const transforms={prompt:processPrompt,spaces:t=>t.replace(/[ \t]/g,''),blankLines:t=>t.split('\n').filter(l=>l.trim()!=='').join('\n'),lineBreaks:t=>t.replace(/\s*\r?\n\s*/g,' ').replace(/ {2,}/g,' '),allWhitespace:t=>t.replace(/\s/gu,''),normalize:t=>t.split('\n').map(l=>l.trim().replace(/[ \t]+/g,' ')).join('\n'),replace:t=>{const f=$('#findText').value;return f?t.split(f).join($('#replaceText').value):t}};
-    function renderResult(){currentResult=transforms[activeTool](editor.value);resultText.textContent=currentResult;const delta=chars(editor.value)-chars(currentResult);resultMeta.textContent=`${format(chars(currentResult))}자 · ${delta>0?`${format(delta)}자 감소`:delta<0?`${format(-delta)}자 증가`:'변동 없음'}`}
+    function renderResult(){currentResult=transformText(activeTool,sourceText,{find:$('#findText').value,replace:$('#replaceText').value});resultText.textContent=currentResult;const delta=chars(sourceText)-chars(currentResult);resultMeta.textContent=`${format(chars(currentResult))}자 · ${delta>0?`${format(delta)}자 감소`:delta<0?`${format(-delta)}자 증가`:'변동 없음'}`}
     function selectTool(tool,button){
       activeTool=tool;cleanupApplied=false;$$('[data-tool]').forEach(b=>{const selected=b===button;b.classList.toggle('active',selected);b.setAttribute('aria-checked',String(selected))});$('#replaceBox').hidden=tool!=='replace';resultBox.hidden=true;syncPip();
     }
     function runCleanup(){renderResult();cleanupApplied=true;resultBox.hidden=false;resultBox.scrollIntoView({behavior:'smooth',block:'nearest'});syncPip();notify('선택한 유형으로 공백을 정리했습니다.')}
     function applyResult(){if(!cleanupApplied)return;const applied=currentResult;cleanupApplied=false;resultBox.hidden=true;replaceEditorValue(applied);syncPip();notify('정리 결과를 원문에 적용했습니다. 실행 취소(Ctrl/⌘+Z)할 수 있어요.')}
     function replaceEditorValue(value){editor.focus();editor.setSelectionRange(0,editor.value.length);if(!document.execCommand('insertText',false,value)){editor.setRangeText(value,0,editor.value.length,'end')}editor.dispatchEvent(new Event('input',{bubbles:true}))}
-    function currentText(){return cleanupApplied?currentResult:editor.value}
+    function setSourceText(value,origin=null){sourceText=value;if(origin!==editor&&editor.value!==sourceText)editor.value=sourceText;const pe=pipWindow&&!pipWindow.closed?pipWindow.document.querySelector('#pipEditor'):null;if(pe&&origin!==pe&&pe.value!==sourceText)pe.value=sourceText;updateCounts()}
+    function currentText(){return cleanupApplied?currentResult:sourceText}
     function notify(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2200)}
     async function ensureDocModule(){
       if(docLoaded)return docController;
@@ -249,8 +234,8 @@
       if(!pipWindow||pipWindow.closed)return;
       const d=pipWindow.document,pe=d.querySelector('#pipEditor');
       d.documentElement.dataset.theme=state.theme;
-      if(pe&&d.activeElement!==pe)pe.value=editor.value;
-      const original=editor.value,n=chars(original);
+      if(pe&&pe.value!==sourceText)pe.value=sourceText;
+      const original=sourceText,n=chars(original);
       d.querySelector('#pAll').textContent=`${format(n)}자`;
       d.querySelector('#pNo').textContent=`${format(withoutWhitespace(original))}자`;
       const pipResult=d.querySelector('#pResultBox');
@@ -267,16 +252,16 @@
       if(!('documentPictureInPicture' in window)){notify('이 브라우저는 미니창을 지원하지 않습니다.');return}
       if(pipWindow&&!pipWindow.closed){pipWindow.focus();return}
       try{
-        pipWindow=await window.documentPictureInPicture.requestWindow({width:520,height:720});
+        pipWindow=await window.documentPictureInPicture.requestWindow({width:currentTab==='doc'?620:520,height:currentTab==='doc'?800:720});
         const d=pipWindow.document;
         const sharedStyles=[...document.styleSheets].map(sheet=>{try{return [...sheet.cssRules].map(rule=>rule.cssText).join('\n')}catch{return ''}}).join('\n');
         d.documentElement.dataset.theme=state.theme;
         d.head.innerHTML=`<title>Textkit 미니창</title><style>${sharedStyles}
           html{scrollbar-gutter:auto}body{background:var(--white);min-width:320px}.pip{padding:16px}.pip-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
           .pip-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--g200)}.pip-tab{height:42px;border:0;background:transparent;color:var(--g600);font-weight:700}.pip-tab.active{color:var(--black);box-shadow:inset 0 -2px var(--black)}.pip-panel[hidden]{display:none}
-          .pip textarea{height:280px}.pip .stats{padding-inline:2px}.pip .counts{width:100%}.pip-type-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 12px;margin-top:14px}.pip-type-grid{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;margin-left:auto}.pip-type-grid .chip{white-space:nowrap}.pip .pip-result{margin-top:12px;margin-bottom:0}.pip .pip-result .result-head{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:8px;padding:13px 14px 0}.pip .pip-result .result-title-wrap{flex:none}.pip .pip-result .result-meta{font-size:11px;text-align:right}.pip .pip-result .result-text{margin:12px 14px 14px;min-height:86px;max-height:220px;overflow:auto}.pip .pip-result .result-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:0 14px 14px}.pip .pip-result .result-actions button{min-width:0;padding:0 8px;white-space:nowrap;font-size:12px}.pip .text-actions{grid-template-columns:minmax(0,.85fr) minmax(0,.85fr) minmax(0,1.4fr);margin-top:12px}.pip .text-actions .cleanup-btn{grid-column:3}.pip .action{width:100%;height:48px;font-size:13px}
+          .pip textarea{height:280px}.pip .stats{padding-inline:2px}.pip .counts{width:100%}.pip-type-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 12px;margin-top:14px}.pip-type-grid{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;margin-left:auto}.pip-type-grid .chip{white-space:nowrap}.pip .pip-result{margin-top:12px;margin-bottom:0}.pip .pip-result .result-head{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:8px;padding:13px 14px 0}.pip .pip-result .result-title-wrap{flex:none}.pip .pip-result .result-meta{font-size:11px;text-align:right}.pip .pip-result .result-text{margin:12px 14px 14px;min-height:86px;max-height:220px;overflow:auto}.pip .pip-result .result-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:0 14px 14px}.pip .pip-result .result-actions button{min-width:0;padding:0 8px;white-space:nowrap;font-size:12px}.pip .text-actions{grid-template-columns:minmax(0,.85fr) minmax(0,.85fr) minmax(0,1.4fr);margin-top:12px}.pip .text-actions .cleanup-btn{grid-column:3}.pip .action{width:100%;height:48px;font-size:13px}.pip .action .icon{width:16px;height:16px}
           .pip-doc-settings{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:10px}.pip-doc-settings .pip-file{grid-column:1/-1}.pip-doc-settings .field-label{font-size:11px}.pip-doc-settings input,.pip-doc-settings select{height:38px}.pip-doc-settings .doc-filename-row{gap:6px}.pip-doc-settings .doc-auto-name{height:38px;padding-inline:9px}
-          .pip-doc-count{margin:0 2px 6px;text-align:right;color:var(--g600);font-size:11px;font-variant-numeric:tabular-nums}.pip .doc-editor-shell{border-radius:11px}.pip .doc-toolbar{position:static;padding:6px}.pip .doc-toolbar select{min-width:104px}.pip .doc-tool{width:32px;height:32px}.pip .doc-tool.wide{width:auto;min-width:max-content;padding-inline:8px;white-space:nowrap}.pip .doc-editor{min-height:300px;max-height:360px;overflow:auto;padding:18px;font-size:14px;resize:none}.pip .doc-warning{margin-top:8px}.pip .doc-footer-row{margin-top:6px}.pip .doc-actions{grid-template-columns:minmax(0,.78fr) minmax(0,1.42fr);margin:0 0 12px}.pip .doc-save,.pip .doc-copy{height:42px;min-width:0;font-size:12px;grid-column:auto}
+          .pip-doc-count{margin:0 2px 6px;text-align:right;color:var(--g600);font-size:11px;font-variant-numeric:tabular-nums}.pip .doc-editor-shell{border-radius:11px}.pip .doc-toolbar{position:static;padding:6px}.pip .doc-toolbar select{min-width:104px}.pip .doc-tool{width:32px;height:32px}.pip .doc-tool.wide{width:auto;min-width:max-content;padding-inline:8px;white-space:nowrap}.pip .doc-editor{height:360px;min-height:260px;max-height:min(560px,60vh);overflow:auto;padding:18px;font-size:14px;resize:vertical}.pip .doc-warning{margin-top:8px}.pip .doc-footer-row{margin-top:6px}.pip .doc-actions{grid-template-columns:minmax(0,.78fr) minmax(0,1.42fr);margin:0 0 20px}.pip .doc-save,.pip .doc-copy{height:42px;min-width:0;font-size:12px;grid-column:auto}
           @media(max-width:430px){.pip .text-actions{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr)}.pip .text-actions .cleanup-btn{grid-column:2}.pip-doc-settings{grid-template-columns:1fr}.pip-doc-settings .pip-file{grid-column:auto}}
         </style>`;
         d.body.innerHTML=`<main class="pip">
@@ -286,7 +271,7 @@
             <textarea id="pipEditor" class="editor" placeholder="글자를 입력하거나 붙여넣어 주세요."></textarea>
             <section class="stats"><div class="counts"><div class="count"><span class="count-label">공백 포함</span><strong class="count-value" id="pAll">0자</strong></div><div class="count"><span class="count-label">공백 제외</span><strong class="count-value" id="pNo">0자</strong></div></div></section>
             <div class="pip-type-head"><span class="eyebrow">공백 정리 유형</span><div class="pip-type-grid" role="radiogroup" aria-label="미니창 공백 정리 유형"><button class="chip active" data-pip-tool="prompt" role="radio" aria-checked="true"># 프롬프트형식</button><button class="chip" data-pip-tool="spaces" role="radio" aria-checked="false">#띄어쓰기제거</button><button class="chip" data-pip-tool="blankLines" role="radio" aria-checked="false">빈 줄 제거</button></div></div>
-            <div class="text-actions"><button class="action text-secondary-action copy-btn" id="pCopy"><span>텍스트 복사</span></button><button class="action text-secondary-action save-btn" id="pSave" aria-label="미니창 내용을 Markdown 파일로 저장"><span data-save-label>.md 파일로 저장</span></button><button class="action cleanup-btn" id="pCleanup"><span>공백 제거</span></button></div>
+            <div class="text-actions"><button class="action text-secondary-action copy-btn" id="pCopy"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg><span>텍스트 복사</span></button><button class="action text-secondary-action save-btn" id="pSave" aria-label="미니창 내용을 Markdown 파일로 저장"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"/></svg><span data-save-label>.md 파일로 저장</span></button><button class="action cleanup-btn" id="pCleanup"><span>공백 제거</span></button></div>
             <section class="result pip-result" id="pResultBox" aria-label="미니창 정리 결과" hidden><div class="result-head"><div class="result-title-wrap"><span class="success-dot" aria-hidden="true">✓</span><h2>정리 결과</h2></div><span class="result-meta" id="pResultMeta">0자 · 변동 없음</span></div><div class="result-text" id="pResultText" tabindex="0"></div><div class="result-actions"><button class="apply-btn text-secondary-action" id="pResultCopy"><span>텍스트 복사</span></button><button class="apply-btn" id="pResultApply">원문에 적용</button></div></section>
           </section>
           <section class="pip-panel" id="pDocPanel" role="tabpanel" hidden>
@@ -313,13 +298,13 @@
         </main>`;
         const setPipTab=target=>{const textActive=target==='text';d.querySelector('#pTextPanel').hidden=!textActive;d.querySelector('#pDocPanel').hidden=textActive;d.querySelector('#pTextTab').classList.toggle('active',textActive);d.querySelector('#pDocTab').classList.toggle('active',!textActive);d.querySelector('#pTextTab').setAttribute('aria-selected',String(textActive));d.querySelector('#pDocTab').setAttribute('aria-selected',String(!textActive))};
         d.querySelector('#pTextTab').addEventListener('click',()=>setPipTab('text'));d.querySelector('#pDocTab').addEventListener('click',()=>setPipTab('doc'));
-        const pe=d.querySelector('#pipEditor');pe.value=editor.value;pe.addEventListener('input',()=>{replaceEditorValue(pe.value)});d.querySelectorAll('[data-pip-tool]').forEach(button=>button.addEventListener('click',()=>selectTool(button.dataset.pipTool,$(`[data-tool="${button.dataset.pipTool}"]`))));d.querySelector('#pCleanup').addEventListener('click',()=>{runCleanup();d.querySelector('#pResultBox').scrollIntoView({behavior:'smooth',block:'nearest'})});d.querySelector('#pCopy').addEventListener('click',()=>copyText(currentText(),d.querySelector('#pCopy')));d.querySelector('#pSave').addEventListener('click',()=>requestMdSave(d.querySelector('#pSave'),pipWindow));d.querySelector('#pResultCopy').addEventListener('click',()=>copyText(currentResult,d.querySelector('#pResultCopy')));d.querySelector('#pResultApply').addEventListener('click',applyResult);
+        const pe=d.querySelector('#pipEditor');pe.value=sourceText;pe.addEventListener('input',()=>setSourceText(pe.value,pe));d.querySelectorAll('[data-pip-tool]').forEach(button=>button.addEventListener('click',()=>selectTool(button.dataset.pipTool,$(`[data-tool="${button.dataset.pipTool}"]`))));d.querySelector('#pCleanup').addEventListener('click',()=>{runCleanup();d.querySelector('#pResultBox').scrollIntoView({behavior:'smooth',block:'nearest'})});d.querySelector('#pCopy').addEventListener('click',()=>copyText(currentText(),d.querySelector('#pCopy')));d.querySelector('#pSave').addEventListener('click',()=>requestMdSave(d.querySelector('#pSave'),pipWindow));d.querySelector('#pResultCopy').addEventListener('click',()=>copyText(currentResult,d.querySelector('#pResultCopy')));d.querySelector('#pResultApply').addEventListener('click',applyResult);
         const controller=await ensureDocModule();controller?.attachPipWindow(pipWindow);
         setPipTab(currentTab==='doc'?'doc':'text');
         pipWindow.addEventListener('pagehide',()=>{pipWindow=null});syncPip();
       }catch(e){console.error(e);notify('미니창을 열 수 없습니다. 보안 연결 또는 권한을 확인해 주세요.')}
     }
-    editor.addEventListener('input',updateCounts);taskType.addEventListener('change',()=>{savePreferences();updateCounts()});
+    editor.addEventListener('input',()=>setSourceText(editor.value,editor));taskType.addEventListener('change',()=>{savePreferences();updateCounts()});
     $$('[data-tool]').forEach(b=>b.addEventListener('click',()=>selectTool(b.dataset.tool,b)));['findText','replaceText'].forEach(id=>$(`#${id}`).addEventListener('input',()=>{if(activeTool==='replace'&&cleanupApplied)renderResult()}));
     $('#moreBtn').addEventListener('click',e=>{const open=$('#extraTools').hidden;$('#extraTools').hidden=!open;e.currentTarget.textContent=open?'접기 ↑':'더보기 ↓';e.currentTarget.setAttribute('aria-expanded',open)});
     $('#cleanupBtn').addEventListener('click',runCleanup);
@@ -333,7 +318,7 @@
     $('#clearSaved').addEventListener('click',()=>{localStorage.removeItem('textkit.draft');notify('저장된 입력 내용을 삭제했습니다.')});$$('[data-close]').forEach(b=>b.addEventListener('click',()=>document.getElementById(b.dataset.close).close()));
     $('#pipBtn').addEventListener('click',openPip);
     $('#textTab').addEventListener('click',()=>switchTab('text'));$('#webpTab').addEventListener('click',()=>switchTab('webp'));$('#docTab').addEventListener('click',()=>switchTab('doc'));
-    taskType.value=localStorage.getItem('textkit.taskType')||'character';$('#autosave').checked=state.autosave;$('#themeToggle').checked=state.theme==='dark';document.documentElement.dataset.theme=state.theme;$('meta[name="theme-color"]').content=state.theme==='dark'?'#181818':'#fafafa';if(state.autosave)editor.value=localStorage.getItem('textkit.draft')||'';
+    taskType.value=localStorage.getItem('textkit.taskType')||'character';$('#autosave').checked=state.autosave;$('#themeToggle').checked=state.theme==='dark';document.documentElement.dataset.theme=state.theme;$('meta[name="theme-color"]').content=state.theme==='dark'?'#181818':'#fafafa';if(state.autosave)editor.value=localStorage.getItem('textkit.draft')||'';sourceText=editor.value;
     $('#appVersion').textContent=`v${APP_VERSION}`;$('meta[name="application-version"]').content=APP_VERSION;
     if(!pipSupported){$('#pipBtn').disabled=true;$('#pipBtn').title='이 브라우저에서는 Document PiP를 지원하지 않습니다.'}
     function registerAppServiceWorker(){
