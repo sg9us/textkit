@@ -27,10 +27,10 @@ test('spaces around bold runs stay outside Markdown markers', () => {
   assert.equal(md(element('p', [element('strong', [text('굵은 앞 ')]), element('span', [text('보통')]), element('strong', [text(' 굵은 뒤')])])), '**굵은 앞** 보통 **굵은 뒤**\n');
 });
 test('nested container keeps inline text together between blocks', () => {
-  assert.equal(md(element('div', [text('앞 '), element('em', [text('기울임')]), element('p', [text('다음')])])), '앞 *기울임*\n\n다음\n');
+  assert.equal(md(element('div', [text('앞 '), element('em', [text('기울임')]), element('p', [text('다음')])])), '앞 *기울임*\n다음\n');
 });
 test('headings and explicit line breaks survive', () => {
-  assert.equal(md(element('h2', [text('제목')]), element('p', [text('첫 줄'), element('br'), text('다음 줄')])), '## 제목\n\n첫 줄  \n다음 줄\n');
+  assert.equal(md(element('h2', [text('제목')]), element('p', [text('첫 줄'), element('br'), text('다음 줄')])), '## 제목\n첫 줄  \n다음 줄\n');
 });
 test('numbered lists preserve non-default and zero start', () => {
   for (const start of ['3', '0']) {
@@ -49,7 +49,32 @@ test('table pipes are escaped', () => {
 test('empty editor returns empty content', () => assert.equal(md(), ''));
 
 test('intentional empty paragraphs remain as blank lines', () => {
-  assert.equal(md(element('p', [text('첫 문단')]), element('p', [element('br')]), element('p', [text('다음 문단')])), '첫 문단\n\n\n다음 문단\n');
+  assert.equal(md(element('p', [text('첫 문단')]), element('p', [element('br')]), element('p', [text('다음 문단')])), '첫 문단\n\n다음 문단\n');
+  assert.equal(md(element('p', [text('첫 문단')]), element('p', [element('br'), element('br')]), element('p', [text('다음 문단')])), '첫 문단\n\n\n다음 문단\n');
+});
+
+test('consecutive source lines do not gain blank lines', () => {
+  assert.equal(md(
+    element('p', [text('*첫 번째')]),
+    element('p', [text('*두 번째')]),
+    element('p', [text('*세 번째')])
+  ), '*첫 번째\n*두 번째\n*세 번째\n');
+});
+
+test('heading and following content stay on consecutive lines', () => {
+  assert.equal(md(
+    element('h1', [text('제목')]),
+    element('p', [text('*내용1')]),
+    element('p', [text('*내용2')])
+  ), '# 제목\n*내용1\n*내용2\n');
+});
+
+test('editing and formatting do not introduce structural blank lines', () => {
+  assert.equal(md(
+    element('h2', [text('제목 수정')]),
+    element('p', [element('strong', [text('*첫 번째 수정')])]),
+    element('p', [text('*두 번째')])
+  ), '## 제목 수정\n***첫 번째 수정**\n*두 번째\n');
 });
 
 test('main and PiP editors serialize identical structured content the same way', () => {

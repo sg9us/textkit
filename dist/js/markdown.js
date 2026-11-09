@@ -45,27 +45,34 @@ function tableToMarkdown(table) {
 }
 
 function blockToMarkdown(node) {
-  if (node.nodeType === 3) return node.nodeValue.trim() ? `${node.nodeValue.trim()}\n\n` : '';
+  if (node.nodeType === 3) return node.nodeValue.trim() ? `${node.nodeValue.trim()}\n` : '';
   if (node.nodeType !== 1) return '';
   const tag = node.tagName.toLowerCase();
-  if (/^h[1-6]$/.test(tag)) return `${'#'.repeat(Number(tag[1]))} ${markdownInline(node).trim()}\n\n`;
-  if (tag === 'p') { const content = markdownInline(node).trim(); return content ? `${content}\n\n` : '\n'; }
+  if (/^h[1-6]$/.test(tag)) return `${'#'.repeat(Number(tag[1]))} ${markdownInline(node).trim()}\n`;
+  if (tag === 'p') {
+    const raw = markdownInline(node);
+    const content = raw.trim();
+    const explicitBreaks = (raw.match(/\n/g) || []).length;
+    return content ? `${content}\n` : '\n'.repeat(Math.max(1, explicitBreaks));
+  }
   if (tag === 'div') {
     const hasBlockChildren = [...node.children].some((child) => /^(H[1-6]|P|DIV|UL|OL|BLOCKQUOTE|HR|PRE|TABLE)$/.test(child.tagName));
     if (hasBlockChildren) return nodesToMarkdown(node.childNodes);
-    const content = markdownInline(node).trim();
-    return content ? `${content}\n\n` : '\n';
+    const raw = markdownInline(node);
+    const content = raw.trim();
+    const explicitBreaks = (raw.match(/\n/g) || []).length;
+    return content ? `${content}\n` : '\n'.repeat(Math.max(1, explicitBreaks));
   }
-  if (tag === 'ul' || tag === 'ol') return `${listToMarkdown(node)}\n\n`;
-  if (tag === 'blockquote') return `${nodesToMarkdown(node.childNodes).trim().split('\n').map((line) => `> ${line}`).join('\n')}\n\n`;
-  if (tag === 'hr') return '---\n\n';
+  if (tag === 'ul' || tag === 'ol') return `${listToMarkdown(node)}\n`;
+  if (tag === 'blockquote') return `${nodesToMarkdown(node.childNodes).trim().split('\n').map((line) => `> ${line}`).join('\n')}\n`;
+  if (tag === 'hr') return '---\n';
   if (tag === 'pre') {
     const code = node.textContent.replace(/\n$/, '');
     const longest = Math.max(0, ...(code.match(/`+/g) || []).map(run => run.length));
     const fence = '`'.repeat(Math.max(3, longest + 1));
-    return `${fence}\n${code}\n${fence}\n\n`;
+    return `${fence}\n${code}\n${fence}\n`;
   }
-  if (tag === 'table') return `${tableToMarkdown(node)}\n\n`;
+  if (tag === 'table') return `${tableToMarkdown(node)}\n`;
   if (tag === 'br') return '\n';
   if (['strong','b','em','i','del','s','code','a','span'].includes(tag)) return markdownInline(node);
   return [...node.childNodes].map(blockToMarkdown).join('');
@@ -74,7 +81,7 @@ function blockToMarkdown(node) {
 
 export function nodesToMarkdown(nodes) {
   let output = '', inline = '';
-  const flushInline = () => { if (inline.trim()) output += inline.trim() + '\n\n'; inline = ''; };
+  const flushInline = () => { if (inline.trim()) output += inline.trim() + '\n'; inline = ''; };
   for (const node of nodes) {
     const isBlock = node.nodeType === 1 && /^(H[1-6]|P|DIV|UL|OL|BLOCKQUOTE|HR|PRE|TABLE)$/.test(node.tagName);
     if (isBlock) { flushInline(); output += blockToMarkdown(node); }
