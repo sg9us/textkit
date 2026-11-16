@@ -1,11 +1,12 @@
 const CACHE_PREFIX = 'textkit-shell-';
-const CACHE_NAME = `${CACHE_PREFIX}v1.6.6`;
+const CACHE_NAME = `${CACHE_PREFIX}v1.6.7`;
 const APP_SHELL = [
   './',
   './index.html',
   './webp.css',
   './doc-md.css',
   './js/config.js',
+  './js/changelog.js',
   './js/webp-maker.js',
   './js/doc-md.js',
   './js/markdown.js',
