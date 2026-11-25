@@ -1,11 +1,19 @@
 const TYPES = { bug: '오류 제보', improvement: '개선 제안', etc: '기타' };
 const STATUSES = { open: '접수됨', reviewing: '확인 중', done: '반영 완료' };
+const ADJECTIVES = ['수줍은', '용감한', '졸린', '엉뚱한', '다정한', '느긋한', '명랑한', '차분한', '씩씩한', '포근한', '반짝이는', '호기심 많은'];
+const NOUNS = ['감자', '고양이', '문어', '토끼', '수달', '판다', '참새', '여우', '해달', '두더지', '펭귄', '다람쥐'];
+
+export function generateRandomNickname(random = Math.random) {
+  const pick = values => values[Math.min(values.length - 1, Math.max(0, Math.floor(random() * values.length)))];
+  return `${pick(ADJECTIVES)} ${pick(NOUNS)}`;
+}
 
 export function initVoc({ config, onNavigate }) {
   const $ = selector => document.querySelector(selector);
   const button = $('#vocButton'), panel = $('#vocPanel'), form = $('#vocForm');
   const list = $('#vocList'), message = $('#vocMessage'), feedback = $('#vocFeedback');
   const typeFilter = $('#vocTypeFilter'), statusFilter = $('#vocStatusFilter');
+  const nicknameInput = $('#vocNickname'), nicknameEdit = $('#vocNicknameEdit');
   const valid = /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec(?:\?.*)?$/.test(config?.webAppUrl || '');
   let entries = [], loading = false;
   let bridgeSource = null, bridgeOrigin = '', nextId = 0;
@@ -47,7 +55,31 @@ export function initVoc({ config, onNavigate }) {
   button.addEventListener('click', () => setPanel(panel.hidden));
   $('#vocClose').addEventListener('click', () => setPanel(false));
   $('#vocBoardLink').addEventListener('click', event => { event.preventDefault(); setPanel(false); onNavigate('voc'); });
-  try { $('#vocAuthor').value = localStorage.getItem('textkit.vocAuthor') || ''; } catch {}
+  let nickname = '';
+  try {
+    nickname = localStorage.getItem('textkit.vocNickname') || localStorage.getItem('textkit.vocAuthor') || '';
+  } catch {}
+  if (!nickname) nickname = generateRandomNickname();
+  nicknameInput.value = nickname;
+  try { localStorage.setItem('textkit.vocNickname', nickname); } catch {}
+
+  function finishNicknameEdit() {
+    const next = nicknameInput.value.trim() || generateRandomNickname();
+    nicknameInput.value = next;
+    nicknameInput.readOnly = true;
+    try { localStorage.setItem('textkit.vocNickname', next); } catch {}
+  }
+  nicknameEdit.addEventListener('click', () => {
+    if (nicknameInput.readOnly) {
+      nicknameInput.readOnly = false;
+      nicknameInput.focus();
+      nicknameInput.select();
+    } else finishNicknameEdit();
+  });
+  nicknameInput.addEventListener('blur', finishNicknameEdit);
+  nicknameInput.addEventListener('keydown', event => {
+    if (event.key === 'Enter') { event.preventDefault(); nicknameInput.blur(); }
+  });
 
   function render() {
     list.replaceChildren();
@@ -62,7 +94,7 @@ export function initVoc({ config, onNavigate }) {
       date.textContent = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(item.created_at));
       head.append(badge, date);
       const content = document.createElement('p'); content.className = 'voc-content'; content.textContent = item.content;
-      const meta = document.createElement('div'); meta.className = 'voc-meta'; meta.textContent = `${item.author} · ${STATUSES[item.status] || STATUSES.open}`;
+      const meta = document.createElement('div'); meta.className = 'voc-meta'; meta.textContent = `${item.nickname || item.author || '익명'} · ${STATUSES[item.status] || STATUSES.open}`;
       card.append(head, content, meta); list.append(card);
     }
   }
@@ -78,13 +110,13 @@ export function initVoc({ config, onNavigate }) {
   form.addEventListener('submit', async event => {
     event.preventDefault();
     if (!valid) { feedback.textContent = 'VOC 저장소 연결을 준비 중입니다.'; return; }
-    const content = $('#vocContent').value.trim(), author = $('#vocAuthor').value.trim(), type = $('#vocType').value;
-    if (!content || !author || !TYPES[type]) return;
+    const content = $('#vocContent').value.trim(), nickname = nicknameInput.value.trim(), type = $('#vocType').value;
+    if (!content || !nickname || !TYPES[type]) return;
     const submit = $('#vocSubmit'); submit.disabled = true; feedback.textContent = '전송 중입니다.';
     try {
-      const created = await call('submit', { type, content, author });
+      const created = await call('submit', { type, content, nickname });
       if (!created?.id) throw new Error('Missing saved record');
-      try { localStorage.setItem('textkit.vocAuthor', author); } catch {}
+      try { localStorage.setItem('textkit.vocNickname', nickname); } catch {}
       $('#vocContent').value = ''; feedback.textContent = '제보가 등록되었습니다.';
       entries.unshift(created); render();
     } catch { feedback.textContent = '등록하지 못했습니다. 잠시 후 다시 시도해 주세요.'; }
