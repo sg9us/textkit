@@ -122,7 +122,7 @@ VOC 제보 내용과 자동 생성 닉네임은 공개 게시판에 표시되며
 
 1. 비공개 Google 스프레드시트에서 `확장 프로그램 → Apps Script`를 엽니다. 스프레드시트는 공개 공유하지 않습니다.
 2. Apps Script의 `Code.gs`를 [`apps-script/Code.gs`](apps-script/Code.gs) 내용으로 교체하고, HTML 파일 `Bridge`를 추가해 [`apps-script/Bridge.html`](apps-script/Bridge.html) 내용을 붙여넣습니다.
-3. 편집기에서 `listVoc`를 한 번 실행해 권한을 승인합니다. `VOC` 시트가 없으면 자동 생성하고 첫 행에 `ID / 작성일시 / 유형 / 닉네임 / 내용 / 처리상태`를 설정합니다. 기존 첫 행이 `작성자`인 경우 데이터 행은 유지한 채 열 이름만 `닉네임`으로 바꿉니다.
+3. 편집기에서 `listVoc`를 한 번 실행해 권한을 승인합니다. `VOC` 시트가 없으면 자동 생성하고 첫 행에 `ID / 작성일시 / 유형 / 닉네임 / 내용 / 처리상태`를 설정합니다. 기존 첫 행이 `작성자`인 경우 데이터 행은 유지한 채 열 이름만 `닉네임`으로 바꾸며, 처리상태 열에는 `open / reviewing / done` 드롭다운을 적용합니다.
 4. Apps Script 웹앱을 `나로 실행`, `모든 사용자` 접근으로 배포합니다. 웹앱은 시트 자체를 공개하지 않으며, 코드에 정의된 등록·조회 함수만 제공합니다.
 5. 웹앱의 `/exec` URL을 [`dist/js/voc-config.js`](dist/js/voc-config.js)에 입력합니다. `script.google.com`의 iframe 안에서 `google.script.run`으로 저장 결과를 되돌려받는 방식입니다. 불투명한 `no-cors` 응답을 저장 성공으로 취급하지 않습니다.
 6. GitHub Pages에서 실제 제보를 등록하고 시트 행, 다른 브라우저의 조회, 시트 상태 변경 반영을 확인한 뒤 배포합니다.

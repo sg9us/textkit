@@ -5,6 +5,27 @@ const HEADERS = ['ID', '작성일시', '유형', '닉네임', '내용', '처리�
 const TYPES = ['bug', 'improvement', 'etc'];
 const STATUSES = ['open', 'reviewing', 'done'];
 
+function statusValidationRule_() {
+  return SpreadsheetApp.newDataValidation()
+    .requireValueInList(STATUSES, true)
+    .setAllowInvalid(false)
+    .setHelpText('open, reviewing, done 중 하나를 선택해 주세요.')
+    .build();
+}
+
+function ensureStatusDropdown_(sheet) {
+  const firstStatusCell = sheet.getRange(2, 6);
+  const existingRule = firstStatusCell.getDataValidation();
+  const existingValues = existingRule?.getCriteriaValues()?.[0] || [];
+  const validRule = existingRule?.getCriteriaType() === SpreadsheetApp.DataValidationCriteria.VALUE_IN_LIST
+    && existingValues.length === STATUSES.length
+    && existingValues.every((value, index) => value === STATUSES[index]);
+  if (!validRule) {
+    sheet.getRange(2, 6, Math.max(1, sheet.getMaxRows() - 1), 1)
+      .setDataValidation(statusValidationRule_());
+  }
+}
+
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('Bridge')
     .setTitle('Textkit VOC bridge')
@@ -29,6 +50,7 @@ function vocSheet_() {
   if (currentHeaders.some((header, index) => header !== HEADERS[index])) {
     throw new Error('VOC 시트의 첫 행 열 이름이 예상 형식과 다릅니다.');
   }
+  ensureStatusDropdown_(sheet);
   return sheet;
 }
 
@@ -82,7 +104,9 @@ function submitVoc(input) {
     const id = Utilities.getUuid(), created = new Date();
     sheet.appendRow([id, created, input.type, safeCell_(nickname), safeCell_(content), 'open']);
     SpreadsheetApp.flush();
-    const saved = sheet.getRange(sheet.getLastRow(), 1, 1, 6).getValues()[0];
+    const savedRow = sheet.getLastRow();
+    sheet.getRange(savedRow, 6).setDataValidation(statusValidationRule_());
+    const saved = sheet.getRange(savedRow, 1, 1, 6).getValues()[0];
     if (String(saved[0]) !== id) throw new Error('저장 결과를 확인할 수 없습니다.');
     return rowObject_(saved);
   } finally { lock.releaseLock(); }

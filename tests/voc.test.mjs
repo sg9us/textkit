@@ -22,3 +22,10 @@ test('Apps Script stores nickname without adding or deleting data columns', asyn
   assert.match(code, /legacyHeaders/);
   assert.match(code, /Utilities\.getUuid\(\)/);
 });
+
+test('Apps Script applies a strict dropdown to the status column', async () => {
+  const code = await readFile(new URL('../apps-script/Code.gs', import.meta.url), 'utf8');
+  assert.match(code, /requireValueInList\(STATUSES, true\)/);
+  assert.match(code, /setAllowInvalid\(false\)/);
+  assert.match(code, /ensureStatusDropdown_\(sheet\)/);
+});
