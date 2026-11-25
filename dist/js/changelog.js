@@ -1,5 +1,10 @@
 window.TEXTKIT_CHANGELOG = Object.freeze([
   {
+    version: '1.7.0',
+    date: '2026-11-25',
+    changes: ['오류와 개선 의견을 남기고 함께 볼 수 있는 VOC 제보창·게시판 추가']
+  },
+  {
     version: '1.6.7',
     date: '2026-11-16',
     changes: [

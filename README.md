@@ -116,6 +116,16 @@ Document Picture-in-Picture는 지원하는 Chromium 계열 데스크톱 브라�
 
 업로드 이미지는 브라우저 메모리에만 유지되며 새로고침하면 사라질 수 있습니다. 탭 전환만으로는 텍스트와 프레임 상태가 사라지지 않습니다.
 
+VOC 제보 내용과 닉네임은 공개 게시판에 표시되며 Supabase의 공용 DB에 저장됩니다. 닉네임만 현재 브라우저의 `localStorage`에 저장됩니다. 제보창은 공용 DB가 연결된 배포에서 사용할 수 있습니다.
+
+### VOC DB 연결
+
+1. Supabase 프로젝트의 SQL Editor에서 [`supabase/voc.sql`](supabase/voc.sql)을 실행합니다. 이 SQL은 공개 조회·작성 권한만 부여하고 수정·삭제 권한은 부여하지 않습니다. `status`의 기본값은 `open`이며 일반 사용자에게 상태 입력 권한이 없습니다.
+2. `dist/js/voc-config.js`에 Project URL과 브라우저용 publishable key 또는 legacy anon key를 입력합니다. service role/secret key는 절대 넣지 않습니다.
+3. 배포 전에 브라우저에서 등록·조회가 되고 수정·삭제가 차단되는지 확인합니다. 상태 변경은 Supabase Dashboard에서 진행합니다.
+
+로그인 없는 공개 글쓰기이므로 임의의 방문자가 제보를 보거나 등록할 수 있습니다. 운영 시 Supabase의 사용량과 제보 내용을 주기적으로 확인하세요.
+
 ## 브라우저 제약
 
 - Animated WebP 생성에는 Canvas WebP 인코딩과 ES 모듈을 지원하는 최신 브라우저가 필요합니다.
@@ -173,6 +183,7 @@ GitHub 저장소를 Cloudflare Pages에 연결할 때 다음 값을 사용합니
 
 ## 버전
 
+- `v1.7.0` — 우측 하단 VOC 제보창과 공용 게시판, 유형·상태 필터를 추가하고 업데이트 내역 화면에 VOC 탭을 연결
 - `v1.6.7` — 헤더 버전 번호에서 열 수 있는 업데이트 내역 페이지를 추가하고 버전 기록을 공통 데이터로 관리
 - `v1.6.6` — Markdown 블록 직렬화를 실제 줄 구조 기준으로 수정해 자동 빈 줄 추가를 방지하고 의도적 빈 줄은 보존
 - `v1.6.5` — Rich Text 편집 전후 글자수를 canonical DOM 텍스트 추출 경로로 통일하고 메인/PiP 카운터 위치를 개선

@@ -1,5 +1,5 @@
-import { documentToMarkdown } from './markdown.js?v=1.6.7';
-import { countCharacters, getEditorPlainText } from './text-utils.js?v=1.6.7';
+import { documentToMarkdown } from './markdown.js?v=1.7.0';
+import { countCharacters, getEditorPlainText } from './text-utils.js?v=1.7.0';
 
 let initialized = false;
 let controller = null;

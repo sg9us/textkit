@@ -16,6 +16,7 @@
   <link rel="apple-touch-icon" href="./icons/icon-192.png">
   <link rel="stylesheet" href="./webp.css">
   <link rel="stylesheet" href="./doc-md.css">
+  <link rel="stylesheet" href="./voc.css">
   <style>
     :root{--background:#fafafa;--surface:#f7f7f7;--card:#fff;--elevated:#fff;--border:#e5e5e5;--text-primary:#202020;--text-secondary:#737373;--black:#202020;--white:#fff;--g50:#fafafa;--g100:#f3f3f3;--g200:#e5e5e5;--g400:#8c8c8c;--g600:#737373;--g700:#525252;--green:#03b26c;--red:#f04452;--radius:12px;--ease:180ms ease;color-scheme:light}
     :root[data-theme="dark"]{--background:#181818;--surface:#202020;--card:#292929;--elevated:#333;--border:#454545;--text-primary:#f5f5f5;--text-secondary:#a6a6a6;--black:#f5f5f5;--white:#181818;--g50:#202020;--g100:#292929;--g200:#454545;--g400:#7d7d7d;--g600:#a6a6a6;--g700:#d9d9d9;color-scheme:dark}
@@ -48,8 +49,12 @@
 
     <section class="updates-page" id="updatesPage" aria-labelledby="updatesTitle" hidden>
       <a class="updates-back" id="updatesBack" href="./">← Textkit으로 돌아가기</a>
+      <nav class="updates-nav" role="tablist" aria-label="업데이트 및 제보"><button id="updatesTab" type="button" role="tab" aria-controls="updatesContent" aria-selected="true">업데이트 내역</button><button id="vocTab" type="button" role="tab" aria-controls="vocBoard" aria-selected="false">VOC</button></nav>
+      <section class="updates-content" id="updatesContent" role="tabpanel" aria-labelledby="updatesTab">
       <div class="updates-intro"><h1 id="updatesTitle">업데이트 내역</h1><p>Textkit의 버전별 변경사항을 확인할 수 있습니다.</p></div>
       <div class="updates-list" id="updatesList"></div>
+      </section>
+      <section class="voc-board" id="vocBoard" role="tabpanel" aria-labelledby="vocTab" hidden><div class="voc-board-head"><h1>VOC</h1><div class="voc-filters"><label class="sr-only" for="vocTypeFilter">유형 필터</label><select id="vocTypeFilter"><option value="all">전체</option><option value="bug">오류</option><option value="improvement">개선</option><option value="etc">기타</option></select><label class="sr-only" for="vocStatusFilter">상태 필터</label><select id="vocStatusFilter"><option value="all">전체 상태</option><option value="open">접수됨</option><option value="reviewing">확인 중</option><option value="done">반영 완료</option></select></div></div><div id="vocMessage" class="voc-message">제보를 불러오는 중입니다.</div><div id="vocList" class="voc-list"></div></section>
     </section>
 
     <nav class="tabs" role="tablist" aria-label="Textkit 도구">
@@ -173,6 +178,9 @@
     <footer class="footer"><span>© 2026 sg9us</span></footer>
   </main>
 
+  <button id="vocButton" class="voc-float" type="button" aria-label="오류·개선 제보" aria-controls="vocPanel" aria-expanded="false" title="오류·개선 제보"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H7l-4 2v-5.5A7.5 7.5 0 1 1 20 11.5Z"/><path d="M7.5 11.5h9"/></svg></button>
+  <aside id="vocPanel" class="voc-panel" aria-labelledby="vocPanelTitle" hidden><div class="voc-panel-head"><h2 id="vocPanelTitle">Textkit에 의견 남기기</h2><button id="vocClose" class="voc-close" type="button" aria-label="제보창 닫기">×</button></div><p>오류 제보나 개선 아이디어를 자유롭게 남겨주세요.</p><form id="vocForm" class="voc-form"><label>유형<select id="vocType"><option value="bug">오류 제보</option><option value="improvement">개선 제안</option><option value="etc">기타</option></select></label><label>내용<textarea id="vocContent" placeholder="어떤 문제가 있었거나, 무엇이 개선되면 좋을지 적어주세요." maxlength="3000" required></textarea></label><label>작성자<input id="vocAuthor" type="text" maxlength="40" autocomplete="nickname" required placeholder="이름 또는 닉네임"></label><span class="voc-public-note">작성한 내용과 닉네임은 공개 VOC 게시판에 표시됩니다.</span><button id="vocSubmit" type="submit">보내기</button><span id="vocFeedback" class="voc-feedback" role="status"></span></form><a id="vocBoardLink" class="voc-board-link" href="?page=updates&amp;tab=voc">VOC 게시판 보기</a></aside>
+
   <dialog id="saveDialog"><form class="modal" id="saveForm"><div class="modal-head"><h2>.md 파일로 저장</h2><button class="close" type="button" data-close="saveDialog" aria-label="닫기">×</button></div><label class="form-group"><span class="form-label">파일명</span><span class="file-row"><input class="text-input" id="fileName" required autocomplete="off"><span class="suffix">.md</span></span></label><p class="privacy-note">이 브라우저에서는 시스템 저장 창을 지원하지 않습니다. 파일은 브라우저의 다운로드 설정에 따라 저장되며, 설정에 따라 위치 선택 창이 표시될 수 있습니다.</p><div class="modal-actions"><button class="modal-btn" type="button" data-close="saveDialog">취소</button><button class="modal-btn primary" type="submit">다운로드</button></div></form></dialog>
   <dialog id="settingsDialog"><div class="modal"><div class="modal-head"><h2>설정</h2><button class="close" type="button" data-close="settingsDialog" aria-label="닫기">×</button></div><div class="switch-row"><div><div class="form-label">자동 임시 저장</div><div style="font-size:12px;color:var(--g600);margin-top:4px">공백 제거 탭의 입력 내용을 이 브라우저에 저장하고, 다시 열 때 복원합니다.</div></div><label class="switch"><input id="autosave" type="checkbox" aria-label="자동 임시 저장"><span class="slider"></span></label></div><div class="switch-row"><div><div class="form-label">다크 모드</div><div style="font-size:12px;color:var(--g600);margin-top:4px">모든 도구와 미니창에 적용합니다.</div></div><label class="switch"><input id="themeToggle" type="checkbox" aria-label="다크 모드"><span class="slider"></span></label></div><p class="privacy-note">자동 임시 저장과 테마 설정은 현재 브라우저에만 보관됩니다. 입력한 텍스트는 외부 서버로 전송되지 않습니다.</p><div class="modal-actions"><button class="modal-btn danger" id="clearSaved" type="button">저장된 입력 삭제</button><button class="modal-btn primary" type="button" data-close="settingsDialog">완료</button></div></div></dialog>
   <dialog id="docSaveDialog"><form class="modal" id="docSaveForm"><div class="modal-head"><h2>.md 파일로 저장</h2><button class="close" type="button" data-close="docSaveDialog" aria-label="닫기">×</button></div><label class="form-group"><span class="form-label">파일명</span><span class="file-row"><input class="text-input" id="docFallbackName" required autocomplete="off"><span class="suffix">.md</span></span></label><p class="privacy-note">이 브라우저에서는 시스템 저장 창을 지원하지 않습니다. 파일은 브라우저 다운로드 설정에 따라 저장되며, 설정에 따라 저장 위치 선택 창이 표시될 수 있습니다.</p><div class="modal-actions"><button class="modal-btn" type="button" data-close="docSaveDialog">취소</button><button class="modal-btn primary" type="submit">다운로드</button></div></form></dialog>
@@ -180,8 +188,10 @@
 
   <script src="./js/config.js"></script>
   <script src="./js/changelog.js"></script>
+  <script src="./js/voc-config.js"></script>
   <script type="module">
-  import { countCharacters, countWithoutWhitespace, transformText } from './js/text-utils.js?v=1.6.7';
+  import { countCharacters, countWithoutWhitespace, transformText } from './js/text-utils.js?v=1.7.0';
+  import { initVoc } from './js/voc.js?v=1.7.0';
   (()=>{
     'use strict';
     const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -196,8 +206,8 @@
     const format=n=>n.toLocaleString('ko-KR');
     const state={autosave:localStorage.getItem('textkit.autosave')==='true',theme:localStorage.getItem('textkit.theme')==='dark'?'dark':'light'};
 
-    function appUrl(showUpdates=false){
-      const url=new URL(location.href);url.searchParams.set('v',APP_VERSION);if(showUpdates)url.searchParams.set('page','updates');else url.searchParams.delete('page');return `${url.pathname}${url.search}${url.hash}`;
+    function appUrl(showUpdates=false,tab='updates'){
+      const url=new URL(location.href);url.searchParams.set('v',APP_VERSION);if(showUpdates){url.searchParams.set('page','updates');if(tab==='voc')url.searchParams.set('tab','voc');else url.searchParams.delete('tab')}else{url.searchParams.delete('page');url.searchParams.delete('tab')}return `${url.pathname}${url.search}${url.hash}`;
     }
     function renderChangelog(){
       const list=$('#updatesList');
@@ -212,11 +222,13 @@
       });
     }
     function showPage(page,{replace=false}={}){
-      const updates=page==='updates',url=appUrl(updates);if(replace)history.replaceState({page:updates?'updates':'app'},'',url);else history.pushState({page:updates?'updates':'app'},'',url);
+      const updates=page!=='app',voc=page==='voc',url=appUrl(updates,page);if(replace)history.replaceState({page},'',url);else history.pushState({page},'',url);
       $('#updatesPage').hidden=!updates;$('.tabs').hidden=updates;$$('.tab-panel').forEach(panel=>panel.hidden=updates||panel.id!==`${currentTab}Panel`);$('.header-actions').hidden=updates;$('.footer').hidden=updates;
-      document.title=updates?'업데이트 내역 — Textkit':'Textkit — 업무용 텍스트 유틸리티';if(updates)window.scrollTo({top:0,behavior:'auto'});
+      $('#updatesContent').hidden=voc;$('#vocBoard').hidden=!voc;$('#updatesTab').setAttribute('aria-selected',String(!voc));$('#vocTab').setAttribute('aria-selected',String(voc));$('#vocButton').hidden=updates;vocController.setPanel(false);
+      document.title=updates?`${voc?'VOC':'업데이트 내역'} — Textkit`:'Textkit — 업무용 텍스트 유틸리티';if(updates)window.scrollTo({top:0,behavior:'auto'});if(voc)vocController.load();
     }
-    function pageFromUrl(){return new URLSearchParams(location.search).get('page')==='updates'?'updates':'app'}
+    function pageFromUrl(){const params=new URLSearchParams(location.search);return params.get('page')==='updates'?(params.get('tab')==='voc'?'voc':'updates'):'app'}
+    const vocController=initVoc({config:window.TEXTKIT_VOC_CONFIG,onNavigate:page=>showPage(page)});
 
     function updateCounts(){
       const n=chars(sourceText), no=withoutWhitespace(sourceText), limit=limits[taskType.value];
@@ -352,6 +364,8 @@
     renderChangelog();
     $('#appVersion').addEventListener('click',event=>{event.preventDefault();if(pageFromUrl()!=='updates')showPage('updates')});
     $('#updatesBack').addEventListener('click',event=>{event.preventDefault();showPage('app')});
+    $('#updatesTab').addEventListener('click',()=>showPage('updates'));
+    $('#vocTab').addEventListener('click',()=>showPage('voc'));
     window.addEventListener('popstate',()=>showPage(pageFromUrl(),{replace:true}));
     showPage(pageFromUrl(),{replace:true});
     if(!pipSupported){$('#pipBtn').disabled=true;$('#pipBtn').title='이 브라우저에서는 Document PiP를 지원하지 않습니다.'}
