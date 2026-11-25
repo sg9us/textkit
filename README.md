@@ -116,15 +116,17 @@ Document Picture-in-Picture는 지원하는 Chromium 계열 데스크톱 브라�
 
 업로드 이미지는 브라우저 메모리에만 유지되며 새로고침하면 사라질 수 있습니다. 탭 전환만으로는 텍스트와 프레임 상태가 사라지지 않습니다.
 
-VOC 제보 내용과 닉네임은 공개 게시판에 표시되며 Supabase의 공용 DB에 저장됩니다. 닉네임만 현재 브라우저의 `localStorage`에 저장됩니다. 제보창은 공용 DB가 연결된 배포에서 사용할 수 있습니다.
+VOC 제보 내용과 닉네임은 공개 게시판에 표시되며 비공개 Google 스프레드시트의 `VOC` 시트에 저장됩니다. 닉네임만 현재 브라우저의 `localStorage`에 저장됩니다. 제보창은 Apps Script 웹앱이 연결된 배포에서 사용할 수 있습니다.
 
-### VOC DB 연결
+### VOC 저장소 연결
 
-1. Supabase 프로젝트의 SQL Editor에서 [`supabase/voc.sql`](supabase/voc.sql)을 실행합니다. 이 SQL은 공개 조회·작성 권한만 부여하고 수정·삭제 권한은 부여하지 않습니다. `status`의 기본값은 `open`이며 일반 사용자에게 상태 입력 권한이 없습니다.
-2. `dist/js/voc-config.js`에 Project URL과 브라우저용 publishable key 또는 legacy anon key를 입력합니다. service role/secret key는 절대 넣지 않습니다.
-3. 배포 전에 브라우저에서 등록·조회가 되고 수정·삭제가 차단되는지 확인합니다. 상태 변경은 Supabase Dashboard에서 진행합니다.
+1. 비공개 Google 스프레드시트에 `VOC` 시트를 만듭니다. 첫 행은 `ID / 작성일시 / 유형 / 작성자 / 내용 / 처리상태`입니다. 시트를 공개 공유하지 않습니다.
+2. 해당 시트에서 Apps Script를 열고 [`apps-script/Code.gs`](apps-script/Code.gs)와 [`apps-script/Bridge.html`](apps-script/Bridge.html)을 추가합니다. `Code.gs`의 `SHEET_ID`를 실제 스프레드시트 ID로 바꿉니다.
+3. Apps Script 웹앱을 `나로 실행`, `모든 사용자` 접근으로 배포합니다. 웹앱은 시트 자체를 공개하지 않으며, 코드에 정의된 등록·조회 함수만 제공합니다.
+4. 웹앱의 `/exec` URL을 [`dist/js/voc-config.js`](dist/js/voc-config.js)에 입력합니다. `script.google.com`의 iframe 안에서 `google.script.run`으로 저장 결과를 되돌려받는 방식입니다. 불투명한 `no-cors` 응답을 저장 성공으로 취급하지 않습니다.
+5. GitHub Pages에서 실제 제보를 등록하고 시트 행, 다른 브라우저의 조회, 시트 상태 변경 반영을 확인한 뒤 배포합니다.
 
-로그인 없는 공개 글쓰기이므로 임의의 방문자가 제보를 보거나 등록할 수 있습니다. 운영 시 Supabase의 사용량과 제보 내용을 주기적으로 확인하세요.
+로그인 없는 공개 글쓰기이므로 임의의 방문자가 제보를 보거나 등록할 수 있습니다. Apps Script는 입력 길이·유형을 검사하고 Sheets 수식으로 해석될 수 있는 입력을 문자열로 저장합니다. 게시판은 입력을 HTML로 해석하지 않고 텍스트로 표시합니다. 악성 게시글은 시트에서 삭제하거나 상태를 변경해 관리해야 합니다.
 
 ## 브라우저 제약
 

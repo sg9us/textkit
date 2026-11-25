@@ -1,6 +1,4 @@
-// Supabase Project Settings의 Project URL과 publishable/anon key만 입력합니다.
-// service_role key는 브라우저에 넣지 마세요.
+// Google Apps Script 웹앱의 /exec URL을 입력합니다. 시트 URL은 공개하지 않습니다.
 window.TEXTKIT_VOC_CONFIG = Object.freeze({
-  url: '',
-  anonKey: ''
+  webAppUrl: ''
 });

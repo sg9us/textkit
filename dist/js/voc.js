@@ -6,10 +6,38 @@ export function initVoc({ config, onNavigate }) {
   const button = $('#vocButton'), panel = $('#vocPanel'), form = $('#vocForm');
   const list = $('#vocList'), message = $('#vocMessage'), feedback = $('#vocFeedback');
   const typeFilter = $('#vocTypeFilter'), statusFilter = $('#vocStatusFilter');
-  const valid = /^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(config?.url || '') && Boolean(config?.anonKey);
+  const valid = /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec(?:\?.*)?$/.test(config?.webAppUrl || '');
   let entries = [], loading = false;
-  const endpoint = valid ? `${config.url.replace(/\/$/, '')}/rest/v1/voc` : '';
-  const headers = valid ? { apikey: config.anonKey } : {};
+  let bridgeSource = null, bridgeOrigin = '', nextId = 0;
+  const pending = new Map();
+  let readyResolve;
+  const ready = new Promise(resolve => { readyResolve = resolve; });
+  if (valid) {
+    const frame = document.createElement('iframe');
+    frame.title = 'VOC 저장소 연결'; frame.hidden = true;
+    frame.src = config.webAppUrl; document.body.append(frame);
+    window.addEventListener('message', event => {
+      const originAllowed = event.origin === 'https://script.google.com' || event.origin === 'https://script.googleusercontent.com' || /^https:\/\/[a-z0-9-]+\.googleusercontent\.com$/.test(event.origin);
+      if (!originAllowed || event.data?.source !== 'textkit-voc-bridge') return;
+      if (event.data.kind === 'ready') { bridgeSource = event.source; bridgeOrigin = event.origin; readyResolve(); return; }
+      if (event.source !== bridgeSource || event.origin !== bridgeOrigin) return;
+      const request = pending.get(event.data.id);
+      if (!request) return;
+      pending.delete(event.data.id); clearTimeout(request.timer);
+      if (event.data.ok) request.resolve(event.data.result);
+      else request.reject(new Error(event.data.error || 'VOC 저장소 오류'));
+    });
+  }
+  async function call(method, payload) {
+    if (!valid) throw new Error('VOC 저장소가 연결되지 않았습니다.');
+    await Promise.race([ready, new Promise((_, reject) => setTimeout(() => reject(new Error('VOC 연결 시간 초과')), 12000))]);
+    return new Promise((resolve, reject) => {
+      const id = ++nextId;
+      const timer = setTimeout(() => { pending.delete(id); reject(new Error('VOC 응답 시간 초과')); }, 20000);
+      pending.set(id, { resolve, reject, timer });
+      bridgeSource.postMessage({ source: 'textkit-voc-client', id, method, payload }, bridgeOrigin);
+    });
+  }
 
   function setPanel(open) {
     panel.hidden = !open;
@@ -43,9 +71,7 @@ export function initVoc({ config, onNavigate }) {
     if (!valid) { message.hidden = false; message.textContent = 'VOC 저장소 연결을 준비 중입니다.'; return; }
     loading = true; message.hidden = false; message.textContent = '제보를 불러오는 중입니다.';
     try {
-      const response = await fetch(`${endpoint}?select=id,type,content,author,status,created_at&order=created_at.desc,id.desc&limit=200`, { headers, cache: 'no-store' });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      entries = await response.json(); render();
+      entries = await call('list'); render();
     } catch { message.textContent = '제보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'; }
     finally { loading = false; }
   }
@@ -56,9 +82,7 @@ export function initVoc({ config, onNavigate }) {
     if (!content || !author || !TYPES[type]) return;
     const submit = $('#vocSubmit'); submit.disabled = true; feedback.textContent = '전송 중입니다.';
     try {
-      const response = await fetch(endpoint, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=representation' }, body: JSON.stringify({ type, content, author }) });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const [created] = await response.json();
+      const created = await call('submit', { type, content, author });
       if (!created?.id) throw new Error('Missing saved record');
       try { localStorage.setItem('textkit.vocAuthor', author); } catch {}
       $('#vocContent').value = ''; feedback.textContent = '제보가 등록되었습니다.';
