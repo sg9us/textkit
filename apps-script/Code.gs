@@ -1,5 +1,5 @@
-// 비공개 스프레드시트의 ID를 입력한 뒤 웹앱으로 배포합니다.
-const SHEET_ID = 'REPLACE_WITH_SPREADSHEET_ID';
+// Textkit VOC 전용 비공개 스프레드시트입니다.
+const SHEET_ID = '1Ao-hWD10FbG-VjZnmApWzm5ATOAgpuHoAHLxvUCw4kY';
 const SHEET_NAME = 'VOC';
 const HEADERS = ['ID', '작성일시', '유형', '작성자', '내용', '처리상태'];
 const TYPES = ['bug', 'improvement', 'etc'];
@@ -12,8 +12,17 @@ function doGet() {
 }
 
 function vocSheet_() {
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(SHEET_NAME);
-  if (!sheet) throw new Error('VOC 시트를 찾을 수 없습니다.');
+  const spreadsheet = SpreadsheetApp.openById(SHEET_ID);
+  let sheet = spreadsheet.getSheetByName(SHEET_NAME);
+  if (!sheet) sheet = spreadsheet.insertSheet(SHEET_NAME);
+  if (sheet.getLastRow() === 0) {
+    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
+    sheet.setFrozenRows(1);
+  }
+  const currentHeaders = sheet.getRange(1, 1, 1, HEADERS.length).getDisplayValues()[0];
+  if (currentHeaders.some((header, index) => header !== HEADERS[index])) {
+    throw new Error('VOC 시트의 첫 행 열 이름이 예상 형식과 다릅니다.');
+  }
   return sheet;
 }
 
@@ -31,7 +40,7 @@ function safeCell_(value) {
 
 function displayCell_(value) {
   const text = String(value || '');
-  return text.startsWith("'") ? text.slice(1) : text;
+  return /^'[=+\-@]/.test(text.trimStart()) ? text.replace(/^([\s\uFEFF]*)'/, '$1') : text;
 }
 
 function rowObject_(row) {
@@ -64,7 +73,6 @@ function submitVoc(input) {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(10000)) throw new Error('잠시 후 다시 시도해 주세요.');
   try {
-    if (sheet.getLastRow() === 0) sheet.appendRow(HEADERS);
     const id = Utilities.getUuid(), created = new Date();
     sheet.appendRow([id, created, input.type, safeCell_(author), safeCell_(content), 'open']);
     SpreadsheetApp.flush();
