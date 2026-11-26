@@ -11,6 +11,8 @@ test('cleanup controls expose the supported toggle set without a more menu', () 
     assert.match(index, new RegExp(`data-pip-tool="${type}"[^>]*aria-pressed=`));
   }
   assert.doesNotMatch(index, /id="moreBtn"|id="extraTools"|data-tool="allWhitespace"|data-tool="normalize"/);
+  assert.match(index, /># 프롬프트형식<\/button>/);
+  assert.match(index, />#띄어쓰기제거<\/button>/);
 });
 
 test('Markdown save copy remains while raw preview UI and handlers are removed', () => {

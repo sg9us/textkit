@@ -1,5 +1,10 @@
 window.TEXTKIT_CHANGELOG = Object.freeze([
   {
+    version: '1.7.2',
+    date: '2026-11-26',
+    changes: ['공백 정리 유형의 기존 버튼 명칭 복원']
+  },
+  {
     version: '1.7.1',
     date: '2026-11-26',
     changes: [

@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" href="./icons/icon-192.png">
   <link rel="stylesheet" href="./webp.css">
   <link rel="stylesheet" href="./doc-md.css">
-  <link rel="stylesheet" href="./voc.css?v=1.7.1">
+  <link rel="stylesheet" href="./voc.css?v=1.7.2">
   <style>
     :root{--background:#fafafa;--surface:#f7f7f7;--card:#fff;--elevated:#fff;--border:#e5e5e5;--text-primary:#202020;--text-secondary:#737373;--black:#202020;--white:#fff;--g50:#fafafa;--g100:#f3f3f3;--g200:#e5e5e5;--g400:#8c8c8c;--g600:#737373;--g700:#525252;--green:#03b26c;--red:#f04452;--radius:12px;--ease:180ms ease;color-scheme:light}
     :root[data-theme="dark"]{--background:#181818;--surface:#202020;--card:#292929;--elevated:#333;--border:#454545;--text-primary:#f5f5f5;--text-secondary:#a6a6a6;--black:#f5f5f5;--white:#181818;--g50:#202020;--g100:#292929;--g200:#454545;--g400:#7d7d7d;--g600:#a6a6a6;--g700:#d9d9d9;color-scheme:dark}
@@ -72,7 +72,7 @@
     </section>
 
     <section class="tools"><div class="section-row"><h2 class="section-title">공백 정리 유형</h2></div>
-      <div id="toolOptions" role="group" aria-label="공백 정리 유형"><div class="tool-grid" id="mainTools"><button class="chip active" data-tool="prompt" aria-pressed="true">프롬프트 형식</button><button class="chip" data-tool="spaces" aria-pressed="false">띄어쓰기 제거</button><button class="chip" data-tool="blankLines" aria-pressed="false">빈 줄 제거</button><button class="chip" data-tool="lineBreaks" aria-pressed="false">줄바꿈 제거</button><button class="chip" data-tool="replace" aria-pressed="false">단어 일괄 치환</button></div></div>
+      <div id="toolOptions" role="group" aria-label="공백 정리 유형"><div class="tool-grid" id="mainTools"><button class="chip active" data-tool="prompt" aria-pressed="true"># 프롬프트형식</button><button class="chip" data-tool="spaces" aria-pressed="false">#띄어쓰기제거</button><button class="chip" data-tool="blankLines" aria-pressed="false">빈 줄 제거</button><button class="chip" data-tool="lineBreaks" aria-pressed="false">줄바꿈 제거</button><button class="chip" data-tool="replace" aria-pressed="false">단어 일괄 치환</button></div></div>
       <div class="replace-box" id="replaceBox" hidden><label>찾을 문자열<input class="text-input" id="findText" type="text" autocomplete="off"></label><label>바꿀 문자열<input class="text-input" id="replaceText" type="text" autocomplete="off"></label></div>
     </section>
 
@@ -188,8 +188,8 @@
   <script src="./js/changelog.js"></script>
   <script src="./js/voc-config.js"></script>
   <script type="module">
-  import { countCharacters, countWithoutWhitespace, normalizeCleanupTypes, transformText } from './js/text-utils.js?v=1.7.1';
-  import { initVoc } from './js/voc.js?v=1.7.1';
+  import { countCharacters, countWithoutWhitespace, normalizeCleanupTypes, transformText } from './js/text-utils.js?v=1.7.2';
+  import { initVoc } from './js/voc.js?v=1.7.2';
   (()=>{
     'use strict';
     const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -322,7 +322,7 @@
           <section class="pip-panel" id="pTextPanel" role="tabpanel">
             <textarea id="pipEditor" class="editor" placeholder="글자를 입력하거나 붙여넣어 주세요."></textarea>
             <section class="stats"><div class="counts"><div class="count"><span class="count-label">공백 포함</span><strong class="count-value" id="pAll">0자</strong></div><div class="count"><span class="count-label">공백 제외</span><strong class="count-value" id="pNo">0자</strong></div></div></section>
-            <div class="pip-type-head"><span class="eyebrow">공백 정리 유형</span><div class="pip-type-grid" role="group" aria-label="미니창 공백 정리 유형"><button class="chip" data-pip-tool="prompt" aria-pressed="false">프롬프트 형식</button><button class="chip" data-pip-tool="spaces" aria-pressed="false">띄어쓰기 제거</button><button class="chip" data-pip-tool="blankLines" aria-pressed="false">빈 줄 제거</button><button class="chip" data-pip-tool="lineBreaks" aria-pressed="false">줄바꿈 제거</button></div></div>
+            <div class="pip-type-head"><span class="eyebrow">공백 정리 유형</span><div class="pip-type-grid" role="group" aria-label="미니창 공백 정리 유형"><button class="chip" data-pip-tool="prompt" aria-pressed="false"># 프롬프트형식</button><button class="chip" data-pip-tool="spaces" aria-pressed="false">#띄어쓰기제거</button><button class="chip" data-pip-tool="blankLines" aria-pressed="false">빈 줄 제거</button><button class="chip" data-pip-tool="lineBreaks" aria-pressed="false">줄바꿈 제거</button></div></div>
             <div class="text-actions"><button class="action text-secondary-action copy-btn" id="pCopy"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg><span>텍스트 복사</span></button><button class="action text-secondary-action save-btn" id="pSave" aria-label="미니창 내용을 Markdown 파일로 저장"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"/></svg><span data-save-label>.md 파일로 저장</span></button><button class="action cleanup-btn" id="pCleanup"><span>공백 제거</span></button></div>
             <section class="result pip-result" id="pResultBox" aria-label="미니창 정리 결과" hidden><div class="result-head"><div class="result-title-wrap"><span class="success-dot" aria-hidden="true">✓</span><h2>정리 결과</h2></div><span class="result-meta" id="pResultMeta">0자 · 변동 없음</span></div><div class="result-text" id="pResultText" tabindex="0"></div><div class="result-actions"><button class="apply-btn text-secondary-action" id="pResultCopy"><span>텍스트 복사</span></button><button class="apply-btn" id="pResultApply">원문에 적용</button></div></section>
           </section>
