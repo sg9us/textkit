@@ -49,14 +49,26 @@ export function processPrompt(text) {
   }).join('');
 }
 
-export function transformText(type, text, options = {}) {
-  const value = String(text);
-  if (type === 'prompt') return processPrompt(value);
-  if (type === 'spaces') return value.replace(/[ \t]/g, '');
-  if (type === 'blankLines') return value.split('\n').filter((line) => line.trim() !== '').join('\n');
-  if (type === 'lineBreaks') return value.replace(/\s*\r?\n\s*/g, ' ').replace(/ {2,}/g, ' ');
-  if (type === 'allWhitespace') return value.replace(/\s/gu, '');
-  if (type === 'normalize') return value.split('\n').map((line) => line.trim().replace(/[ \t]+/g, ' ')).join('\n');
-  if (type === 'replace') return options.find ? value.split(options.find).join(options.replace ?? '') : value;
+const GENERAL_CLEANUP_ORDER = ['blankLines', 'lineBreaks', 'spaces'];
+const VALID_CLEANUP_TYPES = new Set(['prompt', ...GENERAL_CLEANUP_ORDER, 'replace']);
+
+export function normalizeCleanupTypes(types = []) {
+  const requested = Array.isArray(types) ? types : [types];
+  const valid = new Set(requested.filter((type) => VALID_CLEANUP_TYPES.has(type)));
+  if (valid.has('prompt')) return ['prompt'];
+  if (valid.has('replace')) return ['replace'];
+  return GENERAL_CLEANUP_ORDER.filter((type) => valid.has(type));
+}
+
+export function transformText(types, text, options = {}) {
+  let value = String(text);
+  const selected = normalizeCleanupTypes(types);
+  if (selected[0] === 'prompt') return processPrompt(value);
+  if (selected[0] === 'replace') return options.find ? value.split(options.find).join(options.replace ?? '') : value;
+  for (const type of selected) {
+    if (type === 'blankLines') value = value.split('\n').filter((line) => line.trim() !== '').join('\n');
+    else if (type === 'lineBreaks') value = value.replace(/\s*\r?\n\s*/g, ' ').replace(/ {2,}/g, ' ');
+    else if (type === 'spaces') value = value.replace(/[ \t]/g, '');
+  }
   return value;
 }

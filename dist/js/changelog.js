@@ -1,5 +1,13 @@
 window.TEXTKIT_CHANGELOG = Object.freeze([
   {
+    version: '1.7.1',
+    date: '2026-11-26',
+    changes: [
+      '공백 정리 옵션을 다중 선택 방식으로 개편하고 메인 화면과 미니창 선택 상태 동기화',
+      'Markdown 원문 보기 UI를 정리하고 .md 저장 안내 문구 개선'
+    ]
+  },
+  {
     version: '1.7.0',
     date: '2026-11-25',
     changes: ['자동 생성 닉네임으로 오류와 개선 의견을 남기고 함께 볼 수 있는 VOC 제보창·게시판 추가']

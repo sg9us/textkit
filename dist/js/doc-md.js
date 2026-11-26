@@ -1,5 +1,5 @@
-import { documentToMarkdown } from './markdown.js?v=1.7.0';
-import { countCharacters, getEditorPlainText } from './text-utils.js?v=1.7.0';
+import { documentToMarkdown } from './markdown.js?v=1.7.1';
+import { countCharacters, getEditorPlainText } from './text-utils.js?v=1.7.1';
 
 let initialized = false;
 let controller = null;
@@ -12,8 +12,7 @@ export function initDocumentMd({ notify = () => {} } = {}) {
   const els = {
     project: $('#docProjectName'), type: $('#docType'), customType: $('#docCustomType'),
     customTypeWrap: $('#docCustomTypeWrap'), fileName: $('#docFileName'), autoName: $('#docAutoName'),
-    editor: $('#docEditor'), blockStyle: $('#docBlockStyle'), previewToggle: $('#docPreviewToggle'),
-    preview: $('#docMarkdownPreview'), source: $('#docMarkdownSource'), copy: $('#docMarkdownCopy'),
+    editor: $('#docEditor'), blockStyle: $('#docBlockStyle'),
     textCopy: $('#docTextCopy'), characterCount: $('#docCharacterCount'),
     clear: $('#docClear'), save: $('#docSave'), warning: $('#docWarning'),
     fallbackDialog: $('#docSaveDialog'), fallbackName: $('#docFallbackName'), fallbackForm: $('#docSaveForm')
@@ -106,7 +105,6 @@ export function initDocumentMd({ notify = () => {} } = {}) {
     if (force || !fileNameManuallyEdited || !els.fileName.value.trim()) els.fileName.value = generatedFileName();
     localStorage.setItem('textkit.docProject', els.project.value);
     localStorage.setItem('textkit.docType', els.type.value);
-    refreshPreview();
     syncPipFromMain();
   }
 
@@ -250,15 +248,10 @@ export function initDocumentMd({ notify = () => {} } = {}) {
     }
   }
 
-  function refreshPreview() {
-    if (!els.preview.hidden) els.source.textContent = currentMarkdown();
-  }
-
   function exec(command, value = null) {
     clearVerbatim(els.editor);
     els.editor.focus();
     document.execCommand(command, false, value);
-    refreshPreview();
     updateCharacterCounts();
     syncPipFromMain();
   }
@@ -397,7 +390,6 @@ export function initDocumentMd({ notify = () => {} } = {}) {
     els.editor.innerHTML = editor.innerHTML;
     if (editor.dataset.verbatim === 'true') els.editor.dataset.verbatim = 'true';
     else delete els.editor.dataset.verbatim;
-    refreshPreview();
     updateCharacterCounts();
   }
 
@@ -478,30 +470,20 @@ export function initDocumentMd({ notify = () => {} } = {}) {
     const result = pasteDocument(els.editor, html, plain);
     if (result.richHtml) {
       els.warning.classList.toggle('show', /rowspan|colspan|font-size|color:/i.test(html));
-      els.warning.textContent = 'Google Docs 서식을 Markdown으로 표현 가능한 구조로 정리했습니다. 병합 셀·글자색·사용자 지정 정렬은 원문 보기에서 확인해 주세요.';
+      els.warning.textContent = 'Google Docs 서식을 Markdown으로 표현 가능한 구조로 정리했습니다. 병합 셀·글자색·사용자 지정 정렬은 저장 결과에서 확인해 주세요.';
     } else els.warning.classList.remove('show');
-    refreshPreview();
     syncPipFromMain();
     updateCharacterCounts();
   });
   els.editor.addEventListener('beforeinput', (event) => handleVerbatimLineBreak(els.editor, event));
-  els.editor.addEventListener('input', () => { refreshPreview(); syncPipFromMain(); updateCharacterCounts(); });
+  els.editor.addEventListener('input', () => { syncPipFromMain(); updateCharacterCounts(); });
   els.blockStyle.addEventListener('change', () => exec('formatBlock', els.blockStyle.value));
   document.querySelectorAll('[data-doc-command]').forEach((button) => button.addEventListener('click', () => exec(button.dataset.docCommand)));
   $('#docLink').addEventListener('click', insertLink);
   $('#docHr').addEventListener('click', () => exec('insertHorizontalRule'));
   $('#docTable').addEventListener('click', insertTable);
-  els.previewToggle.addEventListener('click', () => {
-    const open = els.preview.hidden;
-    els.preview.hidden = !open;
-    els.previewToggle.textContent = open ? 'Markdown 원문 닫기' : 'Markdown 원문 보기';
-    if (!open) return;
-    els.source.textContent = currentMarkdown();
-    requestAnimationFrame(() => requestAnimationFrame(() => els.preview.scrollIntoView({ behavior: 'smooth', block: 'start' })));
-  });
-  els.copy.addEventListener('click', async () => { const markdown = currentMarkdown(); try { await navigator.clipboard.writeText(markdown); } catch { const area = document.createElement('textarea'); area.value = markdown; document.body.append(area); area.select(); document.execCommand('copy'); area.remove(); } notify('Markdown 원문을 복사했습니다.'); });
   els.textCopy.addEventListener('click', () => copyRichText());
-  els.clear.addEventListener('click', () => { if (!els.editor.textContent.trim() || window.confirm('편집 중인 문서를 모두 지울까요? 이 작업은 되돌릴 수 없습니다.')) { els.editor.innerHTML = ''; clearVerbatim(els.editor); refreshPreview(); syncPipFromMain(); updateCharacterCounts(); els.warning.classList.remove('show'); } });
+  els.clear.addEventListener('click', () => { if (!els.editor.textContent.trim() || window.confirm('편집 중인 문서를 모두 지울까요? 이 작업은 되돌릴 수 없습니다.')) { els.editor.innerHTML = ''; clearVerbatim(els.editor); syncPipFromMain(); updateCharacterCounts(); els.warning.classList.remove('show'); } });
   els.save.addEventListener('click', () => saveMarkdown(window, els.save, els.editor));
   els.fallbackForm.addEventListener('submit', fallbackDownload);
   updateCharacterCounts();

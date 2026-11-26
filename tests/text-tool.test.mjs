@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { countCharacters, countWithoutWhitespace, getEditorPlainText, processPrompt, transformText } from '../dist/js/text-utils.js';
+import { countCharacters, countWithoutWhitespace, getEditorPlainText, normalizeCleanupTypes, processPrompt, transformText } from '../dist/js/text-utils.js';
 
 const textNode = (value) => ({ nodeType: 3, nodeValue: value });
 const element = (tagName, ...childNodes) => ({ nodeType: 1, tagName, childNodes });
@@ -76,8 +76,24 @@ test('fourth-level heading gets one separator; unrelated hash text does not', ()
   assert.equal(processPrompt('####   세 부 제 목\n#본문  기 호\n```\na b\n```'), '#### 세부제목\n#본문기호\n```\na b\n```');
 });
 
-test('all cleanup types use the common transformer', () => {
+test('each supported cleanup type uses the common transformer', () => {
   assert.equal(transformText('spaces', '가 나\t다'), '가나다');
   assert.equal(transformText('blankLines', '가\n\n나'), '가\n나');
+  assert.equal(transformText('lineBreaks', '가\n나'), '가 나');
   assert.equal(transformText('replace', '가나다가', { find: '가', replace: 'A' }), 'A나다A');
+});
+
+test('general cleanup types compose in a fixed order regardless of selection order', () => {
+  const source = '가 나\n\n다 라';
+  const expected = '가나다라';
+  assert.equal(transformText(['spaces', 'lineBreaks', 'blankLines'], source), expected);
+  assert.equal(transformText(['blankLines', 'spaces', 'lineBreaks'], source), expected);
+  assert.equal(transformText(['lineBreaks', 'blankLines'], source), '가 나 다 라');
+  assert.equal(transformText(['blankLines', 'lineBreaks'], source), '가 나 다 라');
+});
+
+test('prompt is exclusive and unsupported legacy cleanup types are discarded', () => {
+  assert.deepEqual(normalizeCleanupTypes(['spaces', 'prompt', 'blankLines']), ['prompt']);
+  assert.deepEqual(normalizeCleanupTypes(['allWhitespace', 'normalize']), []);
+  assert.equal(transformText([], '원문 그대로'), '원문 그대로');
 });
